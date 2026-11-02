@@ -52,6 +52,10 @@ APPEARANCE SETTINGS
 
 Visualiser:
 Choose a style and palette, then adjust sensitivity, brightness, and zoom.
+Kaleidoscope creates mirrored patterns and echo trails; Vortex flows through a
+warped tunnel; Liquid Silk weaves two rippling sheets. These psychedelic styles
+use smoothed bass, mids, and treble for movement and detail, and support custom
+colours, zoom, feathering, and presets like the original eight styles.
 Zoom ranges from 25% to 400% and scales the visuals around their centre without
 resizing the toolbar, backdrop, or feather boundary. The built-in palettes are
 Iridescent, Arctic, Sunset, and Orchid. Either custom gradient colour picker
@@ -90,6 +94,90 @@ on top, or enable Launch pulsive when I sign in to Windows. Preview is off
 at startup. Startup registration applies only to your Windows account and
 uses the current executable path. After moving the application, toggle startup
 off and on to update that path. Windows Startup Apps can also disable it.
+
+PROJECTM / MILKDROP STYLES
+
+Nebula, Acid Tunnel, and Prism Flow use the actual projectM 4.1.4 engine, with
+MilkDrop equations, feedback textures, and shader effects. The earlier eleven
+styles, including Kaleidoscope, Vortex, and Liquid Silk, remain available.
+
+The native styles require an OpenGL 3.3 graphics driver with offscreen WGL
+support and the Microsoft Visual C++ x64 runtime. Keep the projectm directory
+beside Pulsive.exe, including its DLLs and presets subfolder. No projectM
+standalone application or GStreamer installation is required.
+
+In Settings > MilkDrop, Use pulsive colors for MilkDrop is off by default.
+Turn it on to recolour native visuals with the current Pulsive palette or
+custom gradient. Sensitivity, brightness, zoom, feathering, backgrounds,
+and saved user presets work with these modes. Black areas become transparent;
+choose a dark solid background for a conventional MilkDrop appearance.
+
+Rendering is limited to 30 fps and a maximum 960 by 640 offscreen resolution.
+The engine is released when you switch back to a non-projectM style or quit.
+The projectm folder includes the unmodified shared library, dependency notices,
+and buildable corresponding source. The shipped .milk presets are original
+Pulsive presets, rather than a large third-party preset pack.
+
+Some older presets contain broken equation line breaks or missing statement
+separators. Pulsive retries narrowly recognised equation formatting issues in
+memory after a loading failure. Your imported files stay unchanged, and no
+re-import is needed. Other unsupported presets can still fail to load.
+
+MILKDROP LIBRARY AND COLLECTIONS
+
+Open Settings > MilkDrop. New collection opens a glass-styled name prompt.
+Click a collection header or row to choose the import destination (its name
+appears beside the enabled count). Use Import .milk files to select presets,
+or drag .milk files onto a collection. Right-click an imported preset to move
+it to another collection. Existing imports stay in the Imported collection.
+
+Drop a pack folder anywhere in the list to create a collection named after it.
+Pulsive finds .milk files recursively, including nested Presets folders, and
+imports images under directories named Texture or Textures (ignoring case).
+Cover images outside those directories are excluded. Dropping multiple folders
+creates one collection per folder; repeated names receive numbered suffixes.
+Drop a texture-only folder onto a Textures entry to update that collection.
+
+Click a collection header or its arrow to collapse or expand it. Space or Enter
+also toggles a selected header. Collapse state is remembered across launches;
+collapsing hides list rows without disabling presets or changing playback.
+
+Check presets to show them in the visualiser selector. Select all / Unselect
+all applies to every collection. Hiding the active preset switches to Aurora.
+Saved setups retain preset identity when entries move between collections.
+
+Texture requirements are detected automatically from active shader samplers,
+texture-size references and textured custom shapes. Built-in feedback, blur
+and noise textures do not require a folder. Unused declarations are ignored;
+simple sampler aliases are resolved. Complex macros and conditional code can
+produce a Check incomplete status; this does not mark textures as required.
+Detection checks references and filenames, not every possible shader outcome.
+
+Each collection has a Textures entry. Import folder copies its texture folder,
+or drop the folder onto that entry. PNG, JPG/JPEG, DDS, TGA, BMP and DIB files
+are supported, including nested folders. A tick means texture files have been
+imported; it does not guarantee that the folder includes every referenced file.
+Missing texture names appear on affected presets and in the texture row tooltip.
+A collection is marked Requires textures only when a member preset has a
+detected external dependency, independently of whether a folder is imported.
+
+projectM searches only the active collection's textures, so packs may safely
+use different images with the same filename in separate collections. Images
+are matched by filename without extension, ignoring case. Pack textures are
+copied into the local library and stay available after the originals move.
+Some packs assume additional images from a common MilkDrop texture pack;
+those will still be listed as missing if not included in the imported folder.
+
+Presets are copied into %LOCALAPPDATA%/pulsive/milkdrop/presets/; texture folders
+and collection data live under milkdrop/textures/ and milkdrop/library.json.
+Preset files may be up to 8 MB each. Identical files are not duplicated within
+a collection, but may be imported into different collections for different
+textures. Duplicate display names receive numbered names. Choices persist
+across launches without deleting imported files.
+
+Saved user presets also remember the Pulsive colour toggle. A saved setup
+referencing a hidden or missing file falls back to Aurora until that entry is
+enabled and the saved setup selected again.
 
 USER PRESETS
 
@@ -139,6 +227,9 @@ that capture or the chosen output is the cause of weak reactions.
 BUILDING FROM SOURCE
 
 Install the .NET 8 SDK on Windows. The first NuGet restore needs internet.
+Build.ps1 also retrieves a checksum-pinned official projectM runtime and its
+source on the first build, caching them in .tools/projectm/. This download
+requires internet access. Use Build.ps1 before building directly in an IDE.
 From PowerShell in the project folder:
 
   powershell -NoProfile -ExecutionPolicy Bypass -File ./Build.ps1
@@ -159,7 +250,7 @@ src/Visuals/   Visual styles, particles, feathering, borders
 src/Windows/   Windows, controls, input, Windows integration
 src/Glass/     Native and compatibility blur, sampling, glass materials
 assets/        Logo sources, PNG export, application icon
-tools/         Asset-generation tools
+tools/         Asset-generation tools and pinned projectM dependency setup
 
 The editable logo files are assets/pulsive-logo.svg and pulsive-mark.svg.
 Regenerate the PNG and multi-resolution ICO after editing the logo:

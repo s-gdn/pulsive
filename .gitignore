@@ -2,6 +2,7 @@
 [Bb]in/
 [Oo]bj/
 /.tools/
+/tools/
 /dist/
 /dist-clean/
 /artifacts/

@@ -1,0 +1,61 @@
+MILKDROP_PRESET_VERSION=201
+PSVERSION_WARP=0
+PSVERSION_COMP=2
+[preset00]
+fRating=3.0
+fGammaAdj=1.7
+fDecay=0.978
+fVideoEchoZoom=1.012
+fVideoEchoAlpha=0.18
+nVideoEchoOrientation=1
+nWaveMode=0
+bAdditiveWaves=1
+bWaveDots=0
+bWaveThick=1
+bModWaveAlphaByVolume=0
+fWaveAlpha=0.9
+fWaveScale=1.7
+fWaveSmoothing=0.82
+fWaveParam=0.0
+fZoomExponent=1.0
+zoom=1.013
+rot=0.012
+warp=0.0
+cx=0.5
+cy=0.5
+dx=0.0
+dy=0.0
+wave_r=0.3
+wave_g=0.8
+wave_b=1.0
+wave_x=0.5
+wave_y=0.5
+ob_size=0.0
+ib_size=0.0
+mv_a=0.0
+per_frame_1=wave_r=0.5+0.5*sin(time*0.31);wave_g=0.5+0.5*sin(time*0.23+2.1);wave_b=0.5+0.5*sin(time*0.19+4.2);
+per_frame_2=rot=0.008+0.008*bass_att;zoom=1.006+0.006*bass_att;decay=0.974;
+per_pixel_1=rot=rot+0.016*sin(rad*8-time*0.35)+0.007*sin(ang*3+time*0.17);
+per_pixel_2=zoom=zoom+0.007*sin(ang*4+rad*5+time*0.3);dx=0.003*sin(y*9+time*0.2);dy=0.003*cos(x*9-time*0.23);
+shapecode_0_enabled=1
+shapecode_0_sides=32
+shapecode_0_additive=1
+shapecode_0_thickOutline=0
+shapecode_0_textured=0
+shapecode_0_num_inst=16
+shapecode_0_rad=0.015
+shapecode_0_a=0.7
+shapecode_0_a2=0.0
+shapecode_0_border_a=0.2
+shape_0_per_frame1=q1=instance*6.283185/16+time*0.21;x=0.5+0.24*cos(q1);y=0.5+0.24*sin(q1);rad=0.009+0.009*bass_att;
+shape_0_per_frame2=r=wave_r;g=wave_g;b=wave_b;r2=wave_b;g2=wave_r;b2=wave_g;border_r=1;border_g=1;border_b=1;
+comp_1=`shader_body
+comp_2=`{
+comp_3=`float2 p=(uv-0.5)*float2(2.4,1.7);
+comp_4=`p+=0.22*float2(sin(p.y*3+time*0.21),cos(p.x*3-time*0.17));
+comp_5=`float field=sin(p.x*4+time*0.29)+sin(p.y*5-time*0.23)+sin((p.x+p.y)*3+time*0.19);
+comp_6=`float cloud=pow(saturate(0.45+field*0.15),2.0);
+comp_7=`float3 colour=0.5+0.5*cos(field*1.3+time*0.12+float3(0.0,2.1,4.2));
+comp_8=`float edge=saturate(1.0-length((uv-0.5)*2.0));
+comp_9=`ret=tex2D(sampler_main,uv).xyz*0.85+colour*cloud*edge*(0.25+0.2*bass_att);
+comp_10=`}

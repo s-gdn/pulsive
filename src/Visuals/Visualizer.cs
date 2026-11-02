@@ -3,20 +3,51 @@ using System.Windows.Media;
 
 namespace Pulsive;
 
-public sealed class Visualizer : FrameworkElement
+public sealed class Visualizer : FrameworkElement,IDisposable
 {
-    public static readonly string[] Modes = ["Aurora", "Spectrum", "Orbit", "Waveform", "Bloom", "Stardust", "Terrain", "Helix"];
+    public static readonly string[] Modes = ["Aurora", "Spectrum", "Orbit", "Waveform", "Bloom", "Stardust", "Terrain", "Helix", "Kaleidoscope", "Vortex", "Liquid Silk", "Nebula", "Acid Tunnel", "Prism Flow"];
     public static readonly string[] Palettes = ["Iridescent", "Arctic", "Sunset", "Orchid", "Custom"];
     public Color CustomStart { get; set; } = Color.FromRgb(104,239,222);
     public Color CustomEnd { get; set; } = Color.FromRgb(193,122,255);
-    public int Mode { get; set; }
+    int mode;
+    public int Mode
+    {
+        get=>mode;
+        set { if(mode==value) return; mode=value; if(value<11) { projectMRenderer?.Dispose(); projectMRenderer=null; } }
+    }
     public int Palette { get; set; }
+    string? milkdropPresetPath;
+    internal string? MilkdropPresetPath
+    {
+        get=>milkdropPresetPath;
+        set
+        {
+            if(milkdropPresetPath==value) return;
+            milkdropPresetPath=value;
+            if(projectMRenderer?.Error!=null) { projectMRenderer.Dispose(); projectMRenderer=null; }
+        }
+    }
+    public bool UsePulsiveColorsForMilkdrop { get; set; }
+    string? milkdropTextureDirectory;
+    internal string? MilkdropTextureDirectory
+    {
+        get=>milkdropTextureDirectory;
+        set
+        {
+            if(milkdropTextureDirectory==value) return;
+            milkdropTextureDirectory=value;
+            if(projectMRenderer?.Error!=null) { projectMRenderer.Dispose(); projectMRenderer=null; }
+        }
+    }
     public double Intensity { get; set; } = .9;
     public double Zoom { get; set; } = 1;
     public double Time { get; set; }
     public AudioEngine Audio { get; }
     internal StardustField Dust { get; } = new();
     StardustRenderer? dustRenderer;
+    PsychedelicRenderer? psychedelicRenderer;
+    ProjectMRenderer? projectMRenderer;
+    public void Dispose() { projectMRenderer?.Dispose(); projectMRenderer=null; }
     public void SetFeather(Thickness edges,Thickness bounds=default) => OpacityMask = EdgeFeather.CreateMask(edges,bounds);
     public Visualizer(AudioEngine audio) { Audio = audio; IsHitTestVisible = false; ClipToBounds = true; RenderOptions.SetBitmapScalingMode(this,BitmapScalingMode.LowQuality); }
 
@@ -68,6 +99,11 @@ public sealed class Visualizer : FrameworkElement
         // Every mode retains a quiet silhouette at silence, without fabricating audio activity.
         switch(Mode)
         {
+            case >=11:
+                dc.PushOpacity(Math.Clamp(Intensity,0,1));
+                (projectMRenderer??=new()).Draw(dc,MilkdropPresetPath??System.IO.Path.Combine(AppContext.BaseDirectory,"projectm","presets",ProjectMRenderer.Presets[Math.Clamp(Mode-11,0,2)]+".milk"),w,h,t,Audio,UsePulsiveColorsForMilkdrop?Palette:-1,CustomStart,CustomEnd,MilkdropTextureDirectory);
+                dc.Pop();
+                break;
             case 0:
                 for(int layer = 0; layer < 7; layer++)
                 {
@@ -157,6 +193,9 @@ public sealed class Visualizer : FrameworkElement
                     }
                     Trace(dc,pts,depth,1.1,(byte)(40+depth*200));
                 }
+                break;
+            case >=8 and <=10:
+                (psychedelicRenderer??=new()).Draw(dc,Mode,w,h,t,Audio,Intensity,Palette,CustomStart,CustomEnd);
                 break;
             case 7:
                 for(int strand=0;strand<2;strand++)

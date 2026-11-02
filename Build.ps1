@@ -10,6 +10,7 @@ $env:DOTNET_CLI_USE_MSBUILD_SERVER = '0'
 $dotnetExecutable = if (Test-Path '.tools/dotnet/dotnet.exe') { Join-Path $PSScriptRoot '.tools/dotnet/dotnet.exe' } else { 'dotnet' }
 if ($IncludeTests -and !(Test-Path -LiteralPath 'Testing/TestLauncher.cs')) { throw 'Local development checks are not available in Testing/.' }
 $buildOptions = @('--disable-build-servers','-p:UseSharedCompilation=false',"-p:IncludeDevelopmentTests=$($IncludeTests.ToString().ToLowerInvariant())")
+& (Join-Path $PSScriptRoot 'tools/Get-ProjectM.ps1')
 if ($Clean) { $Portable=$true }
 $publishOutput=if($Clean) { 'dist-clean' } else { 'dist' }
 if ($Portable) {
@@ -29,6 +30,8 @@ if ($Portable) {
         '.tools/nuget/naudio/2.2.1/license.txt',
         '.tools/licenses/Win2D-LICENSE.txt',
         '.tools/licenses/VCRTForwarders-LICENSE.txt',
+        '.tools/projectm/runtime/PROJECTM-LICENSE.txt',
+        '.tools/projectm/runtime/GLEW-LICENSE.txt',
         '.tools/nuget/skiasharp/3.119.4/LICENSE.txt',
         '.tools/nuget/skiasharp.nativeassets.win32/3.119.4/LICENSE.txt',
         '.tools/nuget/skiasharp.nativeassets.win32/3.119.4/THIRD-PARTY-NOTICES.txt',

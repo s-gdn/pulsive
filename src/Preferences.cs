@@ -3,6 +3,8 @@ namespace Pulsive;
 public class AppearanceSettings
 {
     public int Mode { get; set; }
+    public string? MilkdropPresetId { get; set; }
+    public bool UsePulsiveColorsForMilkdrop { get; set; }
     public int Palette { get; set; }
     public double Gain { get; set; } = 1.5;
     public double Intensity { get; set; } = .9;
@@ -44,4 +46,5 @@ public sealed class Preferences : AppearanceSettings
     public string? Device { get; set; }
     public bool ToolbarLocked { get; set; }
     public string? ActivePresetId { get; set; }
+    public List<string> DisabledMilkdropPresets { get; set; }=[];
 }

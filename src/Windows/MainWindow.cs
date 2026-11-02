@@ -66,6 +66,8 @@ public sealed partial class MainWindow : Window
     public MainWindow(bool preview)
     {
         prefs = App.IsUiTest ? Preferences.CreateDefault() : Load();
+        prefs.DisabledMilkdropPresets??=[];
+        milkdropLibrary=new MilkdropLibrary(Path.Combine(Path.GetDirectoryName(SettingsPath)!,App.IsUiTest?"milkdrop-test-"+Guid.NewGuid().ToString("N"):"milkdrop"),prefs.DisabledMilkdropPresets);
         prefs.BackgroundBlurAmount=Math.Clamp(prefs.BackgroundBlurAmount,0,48);
         prefs.BackgroundType=prefs.BackgroundType<0?(prefs.BackgroundBlur?2:0):Math.Clamp(prefs.BackgroundType,0,2);
         prefs.BackgroundBlur=prefs.BackgroundType==2;
@@ -81,7 +83,7 @@ public sealed partial class MainWindow : Window
         backdrops=new BackdropService(this);
         backdrops.ContrastBackground=surface=>prefs.BackgroundType==1&&Window.GetWindow(surface)==this?ParseColor(prefs.BackgroundColor,Color.FromRgb(16,23,37)):null;
         AddStyles();
-        visual = new Visualizer(audio) { Mode = Math.Clamp(prefs.Mode,0,7), Palette = Math.Clamp(prefs.Palette,0,4), Intensity = Math.Clamp(prefs.Intensity,.1,1),Zoom=Math.Clamp(prefs.Zoom,.25,4),CustomStart=ParseColor(prefs.CustomColorStart,Color.FromRgb(104,239,222)),CustomEnd=ParseColor(prefs.CustomColorEnd,Color.FromRgb(193,122,255)) };
+        visual = new Visualizer(audio) { Mode = Math.Max(0,prefs.Mode), UsePulsiveColorsForMilkdrop=prefs.UsePulsiveColorsForMilkdrop, Palette = Math.Clamp(prefs.Palette,0,4), Intensity = Math.Clamp(prefs.Intensity,.1,1),Zoom=Math.Clamp(prefs.Zoom,.25,4),CustomStart=ParseColor(prefs.CustomColorStart,Color.FromRgb(104,239,222)),CustomEnd=ParseColor(prefs.CustomColorEnd,Color.FromRgb(193,122,255)) };
         audio.Gain = (float)Math.Clamp(prefs.Gain,.25,5); audio.Demo = preview;
         visualBackdrop=new BackdropSurface { Adaptive=false,TintOpacity=.025,Outline=false,RequireFrame=true,CornerRadius=new CornerRadius(24),BlurRadius=Math.Clamp(prefs.BackgroundBlurAmount,0,48),IsHitTestVisible=false,Visibility=prefs.BackgroundBlur?Visibility.Visible:Visibility.Collapsed };
         solidBackdrop=new Border { CornerRadius=new CornerRadius(24),Background=new SolidColorBrush(ParseColor(prefs.BackgroundColor,Color.FromRgb(16,23,37))),IsHitTestVisible=false,Visibility=prefs.BackgroundType==1?Visibility.Visible:Visibility.Collapsed };
@@ -102,10 +104,14 @@ public sealed partial class MainWindow : Window
         wordmark.Children.Add(new TextBlock { Text="v1.0.0", FontSize=8,TextAlignment=TextAlignment.Center });
         brand.Children.Add(wordmark); bar.Children.Add(new BackdropSurface { Child=brand,Padding=new Thickness(12,2,12,2),Height=34,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(0,0,8,0),CornerRadius=new CornerRadius(17) });
         brand.MouseLeftButtonDown += Drag;
-        modeSelect = Select(Visualizer.Modes,visual.Mode,118);
+        modeSelect = Select([], -1,118);
+        modeSelect.ItemTemplate=(DataTemplate)System.Windows.Markup.XamlReader.Parse("""
+        <DataTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"><TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis" MaxWidth="320" ToolTip="{Binding}"/></DataTemplate>
+        """);
         modeSelect.Height=34;
         modeSelect.ToolTip="Visual style · ← / → to switch";
-        modeSelect.SelectionChanged += (_,_) => { visual.Mode=modeSelect.SelectedIndex; Save(); };
+        modeSelect.SelectionChanged += (_,_) => { if(!syncingVisualModes) { ApplyVisualChoice(modeSelect.SelectedIndex); Save(); } };
+        RebuildVisualiserChoices();
         Grid.SetColumn(modeSelect,1); bar.Children.Add(modeSelect);
         var actions = new StackPanel { Orientation=Orientation.Horizontal, VerticalAlignment=VerticalAlignment.Center };
         Grid.SetColumn(actions,3); bar.Children.Add(actions);
@@ -127,27 +133,30 @@ public sealed partial class MainWindow : Window
         var appearanceTab=Button("Appearance", "Colour, brightness and audio", (_,_)=>{}); appearanceTab.Width=108; appearanceTab.FontSize=12;
         appearanceSettingsTab=appearanceTab;
         var edgeTab=Button("Other", "System audio, window and startup", (_,_)=>{}); edgeTab.Width=100; edgeTab.FontSize=12;
-        var appearanceTitle=new TextBlock { Text="Appearance" }; appearanceTab.Content=appearanceTitle;
-        var otherTitle=new TextBlock { Text="Other" }; edgeTab.Content=otherTitle;
         edgeSettingsTab=edgeTab;
-        tabs.Children.Add(appearanceTab); tabs.Children.Add(edgeTab); controls.Children.Add(tabs);
+        milkdropSettingsTab=Button("MilkDrop","MilkDrop library and colours",(_,_)=>{}); milkdropSettingsTab.Width=108; milkdropSettingsTab.FontSize=12;
+        tabs.Children.Add(appearanceTab); tabs.Children.Add(milkdropSettingsTab); tabs.Children.Add(edgeTab); controls.Children.Add(tabs);
         var appearance=new StackPanel();
         var edgeSettings=new StackPanel { Visibility=Visibility.Collapsed };
-        void SelectSettings(bool edges)
+        var milkdropPage=BuildMilkdropPage();
+        var pages=new[] { appearance,milkdropPage,edgeSettings };
+        var pageButtons=new[] { appearanceTab,milkdropSettingsTab,edgeTab };
+        foreach(var button in pageButtons) button.Content=new TextBlock { Text=button.Content.ToString() };
+        void SelectSettings(int selected)
         {
-            appearance.Visibility=edges?Visibility.Collapsed:Visibility.Visible;
-            edgeSettings.Visibility=edges?Visibility.Visible:Visibility.Collapsed;
-            appearanceTab.Background=edges?Brushes.Transparent:AccentColor;
-            edgeTab.Background=edges?AccentColor:Brushes.Transparent;
-            appearanceTab.Foreground=edges?MutedColor:new SolidColorBrush(Color.FromRgb(28,30,34));
-            edgeTab.Foreground=edges?new SolidColorBrush(Color.FromRgb(28,30,34)):MutedColor;
-            appearanceTab.FontWeight=edges?FontWeights.Normal:FontWeights.SemiBold; edgeTab.FontWeight=edges?FontWeights.SemiBold:FontWeights.Normal;
-            appearanceTab.Tag=edges?null:"ActivePage"; edgeTab.Tag=edges?"ActivePage":null;
-            appearanceTitle.Foreground=edges?MutedColor:new SolidColorBrush(Color.FromRgb(28,30,34));
-            otherTitle.Foreground=edges?new SolidColorBrush(Color.FromRgb(28,30,34)):MutedColor;
+            for(int i=0;i<pages.Length;i++)
+            {
+                bool active=i==selected;
+                pages[i].Visibility=active?Visibility.Visible:Visibility.Collapsed;
+                pageButtons[i].Background=active?AccentColor:Brushes.Transparent;
+                pageButtons[i].Foreground=active?new SolidColorBrush(Color.FromRgb(28,30,34)):MutedColor;
+                ((TextBlock)pageButtons[i].Content).Foreground=pageButtons[i].Foreground;
+                pageButtons[i].FontWeight=active?FontWeights.SemiBold:FontWeights.Normal;
+                pageButtons[i].Tag=active?"ActivePage":null;
+            }
         }
-        appearanceTab.Click+=(_,_)=>SelectSettings(false); edgeTab.Click+=(_,_)=>SelectSettings(true); SelectSettings(false);
-        controls.Children.Add(appearance); controls.Children.Add(edgeSettings);
+        appearanceTab.Click+=(_,_)=>SelectSettings(0); milkdropSettingsTab.Click+=(_,_)=>SelectSettings(1); edgeTab.Click+=(_,_)=>SelectSettings(2); SelectSettings(0);
+        foreach(var page in pages) controls.Children.Add(page);
         var options=new Grid { Margin=new Thickness(0,0,0,10) };
         for(int i=0;i<4;i++) options.ColumnDefinitions.Add(new ColumnDefinition());
         paletteSelect=Select(Visualizer.Palettes,visual.Palette,double.NaN); var palette=paletteSelect; palette.HorizontalAlignment=HorizontalAlignment.Stretch;
@@ -220,7 +229,7 @@ public sealed partial class MainWindow : Window
         PreviewKeyDown+=OnKey;
         SourceInitialized+=(_,_)=> { var source=(HwndSource)PresentationSource.FromVisual(this); source.AddHook(WindowProc); RegisterHotKey(source.Handle,HotkeyId,0x0002|0x0001,0x50); WindowFrame.Suppress(source.Handle); ToolbarMenus.UpdateSystemMenu(source.Handle,prefs.ToolbarLocked,prefs.BackgroundBlur); areaContextMenu=new WindowAreaContextMenu(this,source.Handle,()=>presetDialog?.IsVisible==true||ContextMenu.IsOpen||colorPickers.Any(p=>p.IsPickerOpen)||selectors.Any(s=>s.IsDropDownOpen),OpenContextMenu,CanDragToolbar,BeginToolbarDrag); };
         Loaded+=(_,_)=> { audio.Start(prefs.Device); RefreshDevices(); UpdateDemo(); ToolbarMenus.UpdateJumpList(prefs.ToolbarLocked,prefs.BackgroundBlur); };
-        Closing+=(_,_)=> { closing=true; outerGlow?.Close(); settingsWindow.Close(); Save(); hoverTimer.Stop(); areaContextMenu?.Dispose(); CompositionTarget.Rendering-=Render; backdrops.Dispose(); audio.Dispose(); UnregisterHotKey(new WindowInteropHelper(this).Handle,HotkeyId); };
+        Closing+=(_,_)=> { closing=true; outerGlow?.Close(); settingsWindow.Close(); Save(); hoverTimer.Stop(); areaContextMenu?.Dispose(); CompositionTarget.Rendering-=Render; visual.Dispose(); backdrops.Dispose(); audio.Dispose(); UnregisterHotKey(new WindowInteropHelper(this).Handle,HotkeyId); };
     }
 
     void AddStyles()
@@ -422,8 +431,8 @@ public sealed partial class MainWindow : Window
         switch(e.Key)
         {
             case Key.Escape: Close(); break;
-            case Key.Right: modeSelect.SelectedIndex=(visual.Mode+1)%8; break;
-            case Key.Left: modeSelect.SelectedIndex=(visual.Mode+7)%8; break;
+            case Key.Right: modeSelect.SelectedIndex=(modeSelect.SelectedIndex+1)%visualChoices.Count; break;
+            case Key.Left: modeSelect.SelectedIndex=(modeSelect.SelectedIndex+visualChoices.Count-1)%visualChoices.Count; break;
             case Key.Space: paused=!paused; break;
             case Key.D: ToggleDemo(); break;
             case Key.S: ToggleSettings(); break;

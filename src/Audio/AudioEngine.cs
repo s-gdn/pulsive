@@ -19,6 +19,8 @@ public sealed class AudioEngine : IDisposable
     public string DeviceName { get; private set; } = "Default output";
     public float[] Bands { get; } = new float[96];
     public float[] Wave { get; } = new float[256];
+    internal float[] Pcm { get; } = new float[Size];
+    internal long PcmVersion { get; private set; }
     public float Level { get; private set; }
     public float Bass { get; private set; }
     public float Gain { get; set; } = 1.5f;
@@ -90,6 +92,8 @@ public sealed class AudioEngine : IDisposable
 
     internal void Analyze(float[] snapshot, int sampleRate, double dt)
     {
+        for(int i=0;i<Pcm.Length;i++) Pcm[i]=i<snapshot.Length?Math.Clamp(snapshot[i]*Gain,-1,1):0;
+        PcmVersion++;
         var fft = new Complex[Size];
         double energy = 0;
         for (int i = 0; i < Size; i++) { energy += snapshot[i] * snapshot[i]; fft[i].X = snapshot[i] * (float)(.5 - .5 * Math.Cos(2 * Math.PI * i / (Size - 1))); }

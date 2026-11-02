@@ -51,7 +51,12 @@ internal sealed class PresetLibrary
     {
         foreach(var property in properties) property.SetValue(destination,property.GetValue(source));
     }
-    internal static bool Matches(AppearanceSettings a,AppearanceSettings b)=>properties.All(p=>Equals(p.GetValue(a),p.GetValue(b)));
+    static string? MilkdropId(AppearanceSettings settings)=>settings.Mode<11?null:settings.MilkdropPresetId??(settings.Mode<14?"bundled:"+ProjectMRenderer.Presets[settings.Mode-11]:null);
+    internal static bool Matches(AppearanceSettings a,AppearanceSettings b)
+    {
+        bool sameMode=a.Mode>=11&&b.Mode>=11&&(MilkdropId(a)!=null||MilkdropId(b)!=null)?MilkdropId(a)==MilkdropId(b):a.Mode==b.Mode;
+        return sameMode&&properties.Where(p=>p.Name!=nameof(AppearanceSettings.Mode)&&p.Name!=nameof(AppearanceSettings.MilkdropPresetId)).All(p=>Equals(p.GetValue(a),p.GetValue(b)));
+    }
     internal SavedPreset Add(string name,AppearanceSettings settings)
     {
         name=name.Trim();

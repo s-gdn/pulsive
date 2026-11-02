@@ -4,7 +4,7 @@ A transparent Windows audio visualiser that reacts to sound from other applicati
 
 ![Terrain visualiser, a colour change in settings, and Stardust](assets/pulsive-demo.gif)
 
-- Eight visual styles: Aurora, Spectrum, Orbit, Waveform, Bloom, Stardust, Terrain, and Helix.
+- Fourteen built-in visual styles and importable .milk collections with texture support, including projectM-powered MilkDrop presets **Nebula, Acid Tunnel, and Prism Flow**, plus the original eleven styles.
 - Custom gradients, zoom, adjustable feathering, and saved user presets.
 - Optional background blur or solid colour, plus gradient and reactive glow borders.
 - Resizable overlay with hover controls, toolbar locking, and optional startup on sign-in.
@@ -14,6 +14,8 @@ Download the zip from the [latest release](https://github.com/s-gdn/pulsive/rele
 
 Requires Windows 10 version 2004 or newer (x64). Windows 11 provides live compositor blur; older systems use a compatibility path. Portable builds include .NET.
 
+projectM styles require an OpenGL 3.3 graphics driver and the Visual C++ x64 runtime. Keep the included `projectm` folder beside the executable.
+
 See [how-to.txt](how-to.txt) for running, building, controls, settings, and troubleshooting. Building from source requires the .NET 8 SDK on Windows.
 
-Audio is processed locally in memory; it is not saved or transmitted. Built with WPF, Windows Composition, NAudio, Win2D, and SkiaSharp. Portable builds include dependency licence notices.
+Audio is processed locally in memory; it is not saved or transmitted. Built with WPF, Windows Composition, NAudio, Win2D, SkiaSharp, and [projectM](https://github.com/projectM-visualizer/projectm). Portable builds include dependency licence notices and projectM source.
