@@ -1,8 +1,8 @@
-# pulsive
+<h1><img src="assets/pulsive-logo.png" alt="" width="36" height="36" align="absmiddle"> pulsive</h1>
 
 A transparent Windows audio visualiser that reacts to sound from other applications.
 
-![pulsive logo](assets/pulsive-logo.png)
+![Terrain visualiser, a colour change in settings, and Stardust](assets/pulsive-demo.gif)
 
 - Eight visual styles: Aurora, Spectrum, Orbit, Waveform, Bloom, Stardust, Terrain, and Helix.
 - Custom gradients, zoom, adjustable feathering, and saved user presets.

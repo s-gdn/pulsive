@@ -11,7 +11,7 @@ public sealed class App : Application
         get
         {
 #if DEVELOPMENT_TESTS
-            return Environment.GetCommandLineArgs().Contains("--ui-test");
+            return Environment.GetCommandLineArgs().Any(arg=>arg is "--ui-test" or "--readme-demo");
 #else
             return false;
 #endif
