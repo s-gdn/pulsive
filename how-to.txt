@@ -1,0 +1,195 @@
+pulsive v1.0.0 - How to
+======================
+
+RUNNING
+
+On Windows 10 version 2004 or newer (x64), run Pulsive.exe from a portable
+build, or use Start-Pulsive.cmd in the project folder after building.
+The launcher prefers dist-clean, then dist, then the framework-dependent build.
+Portable builds include .NET and do not need administrator rights. Keep the
+whole distribution folder together, including the accompanying DLL files.
+Windows 11 supports live native blur. Native Win2D effects also need the
+Microsoft Visual C++ 2015-2022 x64 runtime; compatibility blur is used if
+native composition is unavailable.
+
+Play audio in another application. Pulsive captures the shared speaker or
+headphone output using WASAPI loopback, without a microphone or virtual cable.
+It follows the default multimedia output unless you choose another device in
+Settings > Other. Audio routed to another output requires selecting that output.
+Exclusive-mode and protected playback may not be capturable.
+
+WINDOW AND TOOLBAR
+
+Hover inside the overlay to reveal its toolbar. Drag the wordmark or empty
+space in the toolbar row to move the window. Double-click a draggable toolbar
+area to maximise or restore. Drag an edge or corner to resize.
+
+Right-click anywhere inside the window, including transparent areas, for
+settings, background and border options, or Lock toolbar hidden. Unlock it
+from the same menu. The toolbar row remains draggable while locked; the rest
+of the visualiser does not initiate dragging. Transparent empty areas pass
+left-clicks through to the application behind the overlay.
+
+Toolbar lock/unlock and background blur commands are also available in the
+Windows taskbar menu and system menu (Shift + right-click on the taskbar).
+Taskbar commands work while the overlay is hidden or minimised.
+
+Open settings with the gear button or right-click > Settings. Settings is a
+separate resizable window: closing it leaves the visualiser running.
+Closing the main overlay exits Pulsive.
+
+KEYBOARD SHORTCUTS
+
+Left / Right     Previous / next visual style
+Space            Pause / resume visuals
+S                Toggle settings
+D                Toggle generated audio preview
+T                Toggle always on top
+Esc              Close settings when focused; quit from the overlay
+Ctrl + Alt + P   Globally show / hide; restore if minimised
+
+APPEARANCE SETTINGS
+
+Visualiser:
+Choose a style and palette, then adjust sensitivity, brightness, and zoom.
+Zoom ranges from 25% to 400% and scales the visuals around their centre without
+resizing the toolbar, backdrop, or feather boundary. The built-in palettes are
+Iridescent, Arctic, Sunset, and Orchid. Either custom gradient colour picker
+selects Custom; switching to a built-in palette retains your custom colours.
+
+Background:
+Choose None, Solid color, or Blur in settings or the right-click menu. Solid
+color has its own colour picker. Blur strength ranges from 0% to 100% and is
+disabled for other modes. Strength gradually blends the material and increases
+the Gaussian blur radius. The backdrop has rounded corners and is independent
+of visualiser feathering. Toolbar contrast uses the solid background colour
+when selected; otherwise controls adapt to sampled colours behind the window.
+
+Border:
+Choose None, Fixed color, Gradient, Glow, or Reactive glow. The colour swatch
+opens the glass colour picker. Gradient follows the visualiser palette. Glow
+extends outside the window; Reactive glow subtly pulses with bass. Borders
+remain independent of feathering and background blur.
+
+Colour picker:
+Use the shade area for saturation/brightness and the hue slider for hue.
+Arrow keys fine-tune the shade selection; hold Shift for larger adjustments.
+
+Feather:
+Feather amount controls fade width and softness on each side, from 0% to 100%.
+Zero creates a crisp edge. Above 50%, opposing fades overlap and can reduce
+the centre's opacity. Feather bounding box controls where the fade starts:
+each edge can be inset from 0% to 100%. Opposing insets totalling 100% or more
+hide the visuals. Both controls have independent Link all sides toggles.
+Neither affects the background blur, border, or toolbar.
+
+OTHER SETTINGS
+
+Choose the system audio output, enable generated preview audio, toggle always
+on top, or enable Launch pulsive when I sign in to Windows. Preview is off
+at startup. Startup registration applies only to your Windows account and
+uses the current executable path. After moving the application, toggle startup
+off and on to update that path. Windows Startup Apps can also disable it.
+
+USER PRESETS
+
+The toolbar and settings have matching Presets dropdowns. Default cannot be
+deleted or overwritten. Save as new preset opens a name prompt; names must be
+unique and 1-40 characters long. The Default preset uses full background blur,
+a gradient border, and full brightness.
+
+A dot beside the preset name marks unsaved changes. Save changes in settings
+asks before overwriting a user preset. Cancel keeps your edits and the saved
+preset. Modified Default and unsaved setups use Save as new instead. Selecting
+a preset again restores its saved values.
+
+Each user preset has a delete button and a confirmation before removal.
+Deleting a preset leaves the current visuals unchanged.
+
+Presets include visual style, palette/custom colours, sensitivity, brightness,
+zoom, feathering, background, and border. They do not change the audio device,
+startup, always-on-top, window size, or toolbar lock.
+
+PREFERENCES AND PRIVACY
+
+Settings: %LOCALAPPDATA%\pulsive\settings.json
+Presets:  %LOCALAPPDATA%\pulsive\presets.json
+Startup:  HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run
+          Value name: Pulsive
+
+Close the application before manually editing settings or preset files.
+Audio and desktop colour samples stay local and in memory during normal use;
+they are not recorded to disk or transmitted. Colour sampling does not hide
+the overlay from recordings. Protected windows can limit sampling and blur.
+
+BLUR AND PERFORMANCE
+
+Windows 11 uses Windows Composition host backdrop blur and Win2D effects on
+the GPU. Windows 10 and systems without native composition use a SkiaSharp
+compatibility path, which can show capture delay during movement. Disabled
+Windows transparency effects or high contrast can trigger the fallback.
+If native blur is unavailable, check Windows transparency settings and the
+Microsoft Visual C++ x64 runtime installation.
+
+Stardust responds to kick/sub energy (roughly 35-100 Hz) for speed and glow,
+with smooth release and a small idle glow. Cached star sprites keep rendering
+lightweight. Sensitivity changes its response; preview audio can help confirm
+that capture or the chosen output is the cause of weak reactions.
+
+BUILDING FROM SOURCE
+
+Install the .NET 8 SDK on Windows. The first NuGet restore needs internet.
+From PowerShell in the project folder:
+
+  powershell -NoProfile -ExecutionPolicy Bypass -File ./Build.ps1
+  powershell -NoProfile -ExecutionPolicy Bypass -File ./Build.ps1 -Portable
+  powershell -NoProfile -ExecutionPolicy Bypass -File ./Build.ps1 -Clean
+
+The first command builds a framework-dependent application in bin/Release/.
+-Portable publishes self-contained output to dist/.
+-Clean publishes compressed self-contained output to dist-clean/.
+Both distributions exclude debug symbols and local development tests.
+Build.ps1 disables compiler/build-server reuse to avoid lingering build hosts.
+Run Pulsive.exe --preview to inspect visuals with generated audio.
+
+PROJECT LAYOUT AND ASSETS
+
+src/Audio/     Audio capture and frequency analysis
+src/Visuals/   Visual styles, particles, feathering, borders
+src/Windows/   Windows, controls, input, Windows integration
+src/Glass/     Native and compatibility blur, sampling, glass materials
+assets/        Logo sources, PNG export, application icon
+tools/         Asset-generation tools
+
+The editable logo files are assets/pulsive-logo.svg and pulsive-mark.svg.
+Regenerate the PNG and multi-resolution ICO after editing the logo:
+
+  powershell -NoProfile -STA -ExecutionPolicy Bypass -File ./tools/Build-Logo.ps1
+
+The icon uses simplified terrain ridgelines. The overlay keeps its text-only
+wordmark. Keep the checked-in PNG and ICO: builds use the icon directly.
+Dependency licence notices accompany portable distributions.
+
+LOCAL DEVELOPMENT CHECKS (NOT INCLUDED IN GITHUB)
+
+Testing/ is intentionally ignored and contains local verification sources,
+fixtures, and benchmarks. These commands only work when that folder exists:
+
+  powershell -NoProfile -ExecutionPolicy Bypass -File ./Build.ps1 -IncludeTests
+
+Then run bin/Testing/Release/net8.0-windows10.0.19041.0/Pulsive.exe with:
+
+  --self-test               Audio analysis and offscreen rendering checks
+  --self-test --audio-test  Also plays a quiet 440 Hz tone for 1.5 seconds
+  --ui-test                 Desktop controls, presets, input, and shutdown
+  --native-blur-test        Windows 11 compositor pixel checks
+  --backdrop-test           Capture and adaptive contrast checks
+  --blur-benchmark          Compatibility blur benchmark
+  --stardust-benchmark      Offscreen particle performance benchmark
+
+Desktop checks require an interactive Windows desktop; native blur checks
+need Windows 11 with transparency enabled. Run audio checks with other apps
+quiet. UI tests send real mouse input and restore the pointer afterward.
+Outputs, previews, logs, and isolated test settings go to Testing/artifacts/.
+Tests do not change the Windows startup entry. Benchmark results compare
+software-rendering work and do not measure the on-screen frame rate.

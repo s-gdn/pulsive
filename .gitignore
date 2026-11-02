@@ -1,0 +1,54 @@
+# Build output and local SDK/package caches
+[Bb]in/
+[Oo]bj/
+/.tools/
+/dist/
+/dist-clean/
+/artifacts/
+/publish/
+*.pdb
+*.binlog
+
+# Local-only verification, fixtures, benchmarks, and previews
+/Testing/
+/TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# IDE and per-user workspace files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.DotSettings.user
+*.sln.iml
+
+# Local agent configuration
+/.agents/
+/.codex/
+
+# Logs, temporary files, and editor/OS leftovers
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local environment settings and credentials
+.env
+.env.*
+!.env.example
+!.env.template
+/.aws/
+*.pfx
+*.p12
+*.key
