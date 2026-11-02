@@ -31,6 +31,13 @@ public class AppearanceSettings
 
 public sealed class Preferences : AppearanceSettings
 {
+    internal static Preferences CreateDefault()
+    {
+        var preferences=new Preferences { ActivePresetId=PresetLibrary.DefaultId };
+        PresetLibrary.Copy(PresetLibrary.Default,preferences);
+        return preferences;
+    }
+
     public bool Topmost { get; set; } = true;
     public double Width { get; set; } = 1000;
     public double Height { get; set; } = 560;

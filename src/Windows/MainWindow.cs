@@ -65,7 +65,7 @@ public sealed partial class MainWindow : Window
     static readonly Brush AccentColor = new SolidColorBrush(Color.FromRgb(220,223,228));
     public MainWindow(bool preview)
     {
-        prefs = App.IsUiTest ? new Preferences() : Load();
+        prefs = App.IsUiTest ? Preferences.CreateDefault() : Load();
         prefs.BackgroundBlurAmount=Math.Clamp(prefs.BackgroundBlurAmount,0,48);
         prefs.BackgroundType=prefs.BackgroundType<0?(prefs.BackgroundBlur?2:0):Math.Clamp(prefs.BackgroundType,0,2);
         prefs.BackgroundBlur=prefs.BackgroundType==2;
@@ -551,9 +551,9 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            return JsonSerializer.Deserialize<Preferences>(File.ReadAllText(SettingsPath))??new();
+            return JsonSerializer.Deserialize<Preferences>(File.ReadAllText(SettingsPath))??Preferences.CreateDefault();
         }
-        catch { return new(); }
+        catch { return Preferences.CreateDefault(); }
     }
     void Save()
     {
