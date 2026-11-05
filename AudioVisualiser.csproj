@@ -15,6 +15,9 @@
     <PlatformTarget>x64</PlatformTarget>
     <Platform>x64</Platform>
     <OutputPath>bin/$(Configuration)/</OutputPath>
+    <KeepRuntimeSidecars Condition="'$(SingleExeDistribution)' != 'true'">true</KeepRuntimeSidecars>
+    <KeepRuntimeSidecars Condition="'$(SingleExeDistribution)' == 'true'">false</KeepRuntimeSidecars>
+    <IncludeAllContentForSelfExtract Condition="'$(SingleExeDistribution)' == 'true'">true</IncludeAllContentForSelfExtract>
     <IncludeDevelopmentTests Condition="'$(IncludeDevelopmentTests)' == ''">false</IncludeDevelopmentTests>
     <DefineConstants Condition="'$(IncludeDevelopmentTests)' == 'true'">$(DefineConstants);DEVELOPMENT_TESTS</DefineConstants>
     <OutputPath Condition="'$(IncludeDevelopmentTests)' == 'true'">bin/Testing/$(Configuration)/</OutputPath>
@@ -27,12 +30,16 @@
   <Target Name="ExcludeDistributionDebugSymbols" AfterTargets="ComputeFilesToPublish" Condition="'$(ExcludeDistributionSymbols)' == 'true'">
     <ItemGroup><ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(ResolvedFileToPublish.Extension)' == '.pdb'" /></ItemGroup>
   </Target>
+  <ItemGroup Condition="'$(SingleExeDistribution)' == 'true'">
+    <Content Include="README.md;how-to.txt" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include=".tools/licenses/Pulsive-THIRD-PARTY-NOTICES.txt" Link="THIRD-PARTY-NOTICES.txt" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
   <ItemGroup><PackageReference Include="NAudio" Version="2.2.1" /></ItemGroup>
   <ItemGroup><Resource Include="assets/pulsive.ico" /></ItemGroup>
   <ItemGroup><PackageReference Include="SkiaSharp" Version="3.119.4" /></ItemGroup>
   <ItemGroup>
-    <Content Include=".tools/projectm/runtime/*" Exclude=".tools/projectm/runtime/ready-v1" Link="projectm/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
-    <Content Include="assets/projectm/*.milk" Link="projectm/presets/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include=".tools/projectm/runtime/*" Exclude=".tools/projectm/runtime/ready-v1" Link="projectm/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="$(KeepRuntimeSidecars)" />
+    <Content Include="assets/projectm/*.milk" Link="projectm/presets/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="$(KeepRuntimeSidecars)" />
   </ItemGroup>
   <ItemGroup>
     <!-- Use Win2D's effect descriptions only. Its UWP XAML framework reference
@@ -40,7 +47,7 @@
     <PackageDownload Include="Win2D.uwp" Version="[1.28.3]" />
     <PackageDownload Include="Microsoft.VCRTForwarders.140" Version="[1.1.0]" />
     <Reference Include="Microsoft.Graphics.Canvas.Interop" HintPath="$(NuGetPackageRoot)/win2d.uwp/1.28.3/lib/net8.0-windows10.0.19041.0/Microsoft.Graphics.Canvas.Interop.dll" />
-    <Content Include="$(NuGetPackageRoot)/win2d.uwp/1.28.3/runtimes/win-x64/native/Microsoft.Graphics.Canvas.dll" Link="Microsoft.Graphics.Canvas.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
-    <Content Include="$(NuGetPackageRoot)/microsoft.vcrtforwarders.140/1.1.0/runtimes/win-x64/native/release/*.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="$(NuGetPackageRoot)/win2d.uwp/1.28.3/runtimes/win-x64/native/Microsoft.Graphics.Canvas.dll" Link="Microsoft.Graphics.Canvas.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="$(KeepRuntimeSidecars)" />
+    <Content Include="$(NuGetPackageRoot)/microsoft.vcrtforwarders.140/1.1.0/runtimes/win-x64/native/release/*.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="$(KeepRuntimeSidecars)" />
   </ItemGroup>
 </Project>

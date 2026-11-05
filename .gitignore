@@ -4,6 +4,7 @@
 /.tools/
 /dist/
 /dist-clean/
+/dist-exe/
 /artifacts/
 /publish/
 *.pdb

@@ -326,11 +326,20 @@ From PowerShell in the project folder:
   powershell -NoProfile -ExecutionPolicy Bypass -File ./Build.ps1
   powershell -NoProfile -ExecutionPolicy Bypass -File ./Build.ps1 -Portable
   powershell -NoProfile -ExecutionPolicy Bypass -File ./Build.ps1 -Clean
+  powershell -NoProfile -ExecutionPolicy Bypass -File ./Build.ps1 -Exe
 
 The first command builds a framework-dependent application in bin/Release/.
 -Portable publishes self-contained output to dist/.
 -Clean publishes compressed self-contained output to dist-clean/.
-Both distributions exclude debug symbols and local development tests.
+-Exe publishes one compressed self-contained Pulsive.exe to dist-exe/.
+It bundles native dependencies, presets, documentation, notices and projectM
+source. .NET extracts these locally before startup; nothing is downloaded.
+On Windows the default extraction cache is %TEMP%\\.net\\Pulsive\\<bundle-id>\\.
+Licence notices and corresponding projectM source can be found there in
+THIRD-PARTY-NOTICES.txt and projectm/projectm-source.tar.gz. To use a modified
+projectM library, replace projectM-4.dll in that extracted projectm directory
+while Pulsive is closed, or use the ordinary -Portable distribution.
+All distributions exclude debug symbols and local development tests.
 Build.ps1 disables compiler/build-server reuse to avoid lingering build hosts.
 Run Pulsive.exe --preview to inspect visuals with generated audio.
 
