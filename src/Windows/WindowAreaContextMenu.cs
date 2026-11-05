@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Threading;
+using System.Windows.Media;
 
 namespace Pulsive;
 
@@ -21,6 +22,11 @@ internal sealed class WindowAreaContextMenu : IDisposable
     DragGesture? gesture;
     internal string DragStatus { get; private set; }="No toolbar press";
     sealed class DragGesture { public Point Latest; public bool UpdatePending; }
+    void MoveAtRender(object? sender,EventArgs e)
+    {
+        if(gesture is not { UpdatePending:true } moving) return;
+        moving.UpdatePending=false; drag(moving.Latest,1);
+    }
 
     internal WindowAreaContextMenu(Window owner,IntPtr hwnd,Func<bool> popupOpen,Action<Point> open,Func<Point,bool> canDrag,Action<Point,int> drag)
     {
@@ -29,6 +35,7 @@ internal sealed class WindowAreaContextMenu : IDisposable
         callback=OnMouse;
         hook=SetWindowsHookEx(14,callback,GetModuleHandle(null),0);
         if(hook==IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error(),"Could not enable right-clicks over the transparent window area.");
+        CompositionTarget.Rendering+=MoveAtRender;
     }
     IntPtr OnMouse(int code,IntPtr message,IntPtr data)
     {
@@ -50,11 +57,7 @@ internal sealed class WindowAreaContextMenu : IDisposable
             {
                 DragStatus="Dragging";
                 moving.Latest=position;
-                if(!moving.UpdatePending)
-                {
-                    moving.UpdatePending=true;
-                    owner.Dispatcher.BeginInvoke(DispatcherPriority.Input,new Action(()=> { moving.UpdatePending=false; drag(moving.Latest,1); }));
-                }
+                moving.UpdatePending=true;
                 // Let Windows move the cursor. Suppressing movement would leave
                 // the release coordinates at the original position and snap back.
                 return CallNextHookEx(hook,code,message,data);
@@ -91,6 +94,7 @@ internal sealed class WindowAreaContextMenu : IDisposable
     }
     public void Dispose()
     {
+        CompositionTarget.Rendering-=MoveAtRender;
         if(hook!=IntPtr.Zero) { UnhookWindowsHookEx(hook); hook=IntPtr.Zero; }
         GC.KeepAlive(callback);
     }

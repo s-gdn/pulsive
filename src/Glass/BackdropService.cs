@@ -41,7 +41,7 @@ internal sealed class BackdropService : IDisposable
         owner.IsVisibleChanged+=VisibilityChanged; owner.StateChanged+=StateChanged;
         CompositionTarget.Rendering+=Render;
     }
-    void Moved(object? sender,EventArgs e) { geometryDirty=true; RefreshNative(); }
+    void Moved(object? sender,EventArgs e) { geometryDirty=true; }
     void Resized(object sender,SizeChangedEventArgs e) { geometryDirty=true; RefreshNative(); }
     void VisibilityChanged(object sender,DependencyPropertyChangedEventArgs e) { if(!owner.IsVisible) native.Hide(); else RefreshNative(); }
     void StateChanged(object? sender,EventArgs e) { if(owner.WindowState==WindowState.Minimized) native.Hide(); else RefreshNative(); }

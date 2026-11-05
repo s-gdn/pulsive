@@ -110,7 +110,7 @@ internal sealed class MilkdropLibrary
     }
     string FilePath(string id)=>Path.Combine(directory,"presets",id+".milk");
     string TexturePath(string collection,string revision)=>Path.Combine(directory,"textures",collection,revision);
-    MilkdropEntry Entry(Record record,ISet<string>? hidden=null)=>new() { Id=record.Id,Name=record.Name,FilePath=FilePath(record.Id),Collection=collections.Single(c=>c.Id==record.CollectionId),Analysis=AnalyseFile(FilePath(record.Id)),IsEnabled=hidden?.Contains(record.Id)!=true };
+    MilkdropEntry Entry(Record record,ISet<string>? hidden=null,MilkdropTextureAnalysis? analysis=null)=>new() { Id=record.Id,Name=record.Name,FilePath=FilePath(record.Id),Collection=collections.Single(c=>c.Id==record.CollectionId),Analysis=analysis??AnalyseFile(FilePath(record.Id)),IsEnabled=hidden?.Contains(record.Id)!=true };
     void EnsureWritable() { if(LoadError!=null) throw new IOException(LoadError); }
     void Write(List<Record> updated,IEnumerable<MilkdropCollection>? groups=null)
     {
@@ -149,10 +149,14 @@ internal sealed class MilkdropLibrary
         collection.IsExpanded=expanded; collection.Refresh();
     }
     internal static bool ContainsMilkFiles(string folder)=>Directory.EnumerateFiles(folder,"*",recursive).Any(file=>Path.GetExtension(file).Equals(".milk",StringComparison.OrdinalIgnoreCase));
-    internal PackImportResult ImportFolder(string folder)
+    internal PackImportResult ImportFolder(string folder,IProgress<MilkdropImportProgress>? progress=null)
     {
         EnsureWritable();
-        var files=Directory.EnumerateFiles(folder,"*",recursive).ToArray();
+        var reporter=new MilkdropImportReporter(progress);
+        reporter.Report("Scanning folder",0,0,folder);
+        var found=new List<string>();
+        foreach(string file in Directory.EnumerateFiles(folder,"*",recursive)) { found.Add(file); reporter.Report("Scanning folder",found.Count,0,file); }
+        var files=found.ToArray();
         var presets=files.Where(file=>Path.GetExtension(file).Equals(".milk",StringComparison.OrdinalIgnoreCase)).ToArray();
         if(presets.Length==0) throw new ArgumentException("This folder contains no .milk presets. Drop a texture-only folder onto a collection's Textures entry.");
         if(!presets.Any(file=>new FileInfo(file).Length<=8*1024*1024&&File.ReadAllText(file).Contains("[preset00]",StringComparison.OrdinalIgnoreCase)))
@@ -165,12 +169,12 @@ internal sealed class MilkdropLibrary
             string ending=$" ({suffix++})"; unique=name[..Math.Min(name.Length,40-ending.Length)]+ending;
         }
         var collection=CreateCollection(unique);
-        var imported=Import(presets,collection.Id); var errors=new List<string>(imported.Errors);
+        var imported=Import(presets,collection.Id,progress); var errors=new List<string>(imported.Errors);
         var textures=files.Where(file=>TextureExtensions.Contains(Path.GetExtension(file))&&InTextureFolder(folder,file)).ToArray();
         int count=0;
         if(textures.Length>0)
         {
-            try { count=ImportTextureFiles(collection,folder,textures); }
+            try { count=ImportTextureFiles(collection,folder,textures,progress); }
             catch(Exception error) when(error is IOException or UnauthorizedAccessException or ArgumentException) { errors.Add("Textures: "+error.Message); }
         }
         return new(collection,imported,count,errors);
@@ -181,58 +185,71 @@ internal sealed class MilkdropLibrary
         return rootName.Equals("texture",StringComparison.OrdinalIgnoreCase)||rootName.Equals("textures",StringComparison.OrdinalIgnoreCase)
             ||(Path.GetDirectoryName(Path.GetRelativePath(root,file))??"").Split(Path.DirectorySeparatorChar,Path.AltDirectorySeparatorChar).Any(part=>part.Equals("texture",StringComparison.OrdinalIgnoreCase)||part.Equals("textures",StringComparison.OrdinalIgnoreCase));
     }
-    internal ImportResult Import(IEnumerable<string> files,string collectionId="imported")
+    internal ImportResult Import(IEnumerable<string> files,string collectionId="imported",IProgress<MilkdropImportProgress>? progress=null)
     {
         var added=new List<MilkdropEntry>(); var errors=new List<string>(); int duplicates=0;
         if(LoadError!=null) return new(added,0,[LoadError]);
         if(collections.All(c=>c.Id!=collectionId)) return new(added,0,["Select a collection before importing."]);
         var updated=new List<Record>(records);
-        foreach(string file in files.Distinct(StringComparer.OrdinalIgnoreCase))
+        var lookup=updated.GroupBy(r=>(r.CollectionId,r.ContentHash??r.Id)).ToDictionary(g=>g.Key,g=>g.First());
+        var usedIds=updated.Select(r=>r.Id).ToHashSet(StringComparer.Ordinal);
+        var names=updated.Select(r=>r.Name).Concat(entries.Select(e=>e.Name)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var paths=files.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var reporter=new MilkdropImportReporter(progress); int completed=0;
+        reporter.Report("Importing presets",0,paths.Length);
+        foreach(string file in paths)
         {
             try
             {
                 if(!Path.GetExtension(file).Equals(".milk",StringComparison.OrdinalIgnoreCase)) { errors.Add(Path.GetFileName(file)+": not a .milk file."); continue; }
                 if(new FileInfo(file).Length>8*1024*1024) { errors.Add(Path.GetFileName(file)+": preset exceeds 8 MB."); continue; }
                 byte[] data=File.ReadAllBytes(file);
-                if(!Encoding.UTF8.GetString(data).Contains("[preset00]",StringComparison.OrdinalIgnoreCase)) { errors.Add(Path.GetFileName(file)+": not a MilkDrop preset."); continue; }
+                string text=Encoding.UTF8.GetString(data);
+                if(text.Length>0&&text[0]=='\uFEFF') text=text[1..];
+                if(!text.Contains("[preset00]",StringComparison.OrdinalIgnoreCase)) { errors.Add(Path.GetFileName(file)+": not a MilkDrop preset."); continue; }
                 string hash=Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant();
-                var record=updated.FirstOrDefault(r=>r.CollectionId==collectionId&&(r.ContentHash??r.Id)==hash);
+                lookup.TryGetValue((collectionId,hash),out var record);
                 if(record!=null&&File.Exists(FilePath(record.Id))) { duplicates++; continue; }
                 string id=record?.Id??(collectionId=="imported"?hash:Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(collectionId+":"+hash))).ToLowerInvariant());
-                if(record==null&&updated.Any(r=>r.Id==id)) id=Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(collectionId+":"+hash))).ToLowerInvariant();
+                if(record==null&&usedIds.Contains(id)) id=Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(collectionId+":"+hash))).ToLowerInvariant();
                 Directory.CreateDirectory(Path.Combine(directory,"presets")); File.WriteAllBytes(FilePath(id),data);
                 if(record==null)
                 {
                     string name=new(Path.GetFileNameWithoutExtension(file).Where(c=>!char.IsControl(c)).ToArray());
                     if(string.IsNullOrWhiteSpace(name)) name="MilkDrop preset";
                     string unique=name; int suffix=2;
-                    while(entries.Any(entry=>entry.Name.Equals(unique,StringComparison.OrdinalIgnoreCase))||updated.Any(entry=>entry.Name.Equals(unique,StringComparison.OrdinalIgnoreCase))) unique=$"{name} ({suffix++})";
+                    while(!names.Add(unique)) unique=$"{name} ({suffix++})";
                     record=new Record { Id=id,Name=unique,CollectionId=collectionId,ContentHash=hash }; updated.Add(record);
+                    lookup[(collectionId,hash)]=record; usedIds.Add(id);
                 }
-                added.Add(Entry(record));
+                added.Add(Entry(record,analysis:MilkdropTextureAnalysis.Analyse(text)));
             }
             catch(Exception e) when(e is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException) { errors.Add(Path.GetFileName(file)+": couldn't import this file."); }
+            finally { reporter.Report("Importing presets",++completed,paths.Length,file); }
         }
         if(added.Count>0)
         {
-            try { Write(updated); records.Clear(); records.AddRange(updated); entries.AddRange(added); RefreshCollections(); }
+            try { reporter.Report("Saving library",0,1); Write(updated); records.Clear(); records.AddRange(updated); entries.AddRange(added); RefreshCollections(); reporter.Report("Saving library",1,1); }
             catch(Exception e) when(e is IOException or UnauthorizedAccessException) { errors.Add("Couldn't save the MilkDrop library. Check folder access and try importing again."); added.Clear(); }
         }
         return new(added,duplicates,errors);
     }
-    internal int ImportTextures(MilkdropCollection collection,string source)
-        =>ImportTextureFiles(collection,source,Directory.EnumerateFiles(source,"*",recursive).Where(file=>TextureExtensions.Contains(Path.GetExtension(file))).ToArray());
-    int ImportTextureFiles(MilkdropCollection collection,string source,string[] files)
+    internal int ImportTextures(MilkdropCollection collection,string source,IProgress<MilkdropImportProgress>? progress=null)
+        =>ImportTextureFiles(collection,source,Directory.EnumerateFiles(source,"*",recursive).Where(file=>TextureExtensions.Contains(Path.GetExtension(file))).ToArray(),progress);
+    int ImportTextureFiles(MilkdropCollection collection,string source,string[] files,IProgress<MilkdropImportProgress>? progress=null)
     {
         EnsureWritable();
         if(!collections.Contains(collection)) throw new ArgumentException("Select a collection from this library.");
         string revision=Guid.NewGuid().ToString("N"),destination=TexturePath(collection.Id,revision);
         if(files.Length==0) throw new ArgumentException("This folder contains no supported textures (PNG, JPG, DDS, TGA, BMP or DIB).");
+        var reporter=new MilkdropImportReporter(progress); int completed=0;
+        reporter.Report("Importing textures",0,files.Length);
         foreach(string file in files)
         {
             string relative=Path.GetRelativePath(source,file),target=Path.GetFullPath(Path.Combine(destination,relative));
             if(!target.StartsWith(Path.GetFullPath(destination)+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase)) throw new IOException("Texture path is outside the collection.");
             Directory.CreateDirectory(Path.GetDirectoryName(target)!); File.Copy(file,target,true);
+            reporter.Report("Importing textures",++completed,files.Length,file);
         }
         var replacement=new MilkdropCollection { Id=collection.Id,Name=collection.Name,TextureRevision=revision,IsExpanded=collection.IsExpanded };
         Write(records,collections.Select(c=>c==collection?replacement:c));
@@ -256,9 +273,10 @@ internal sealed class MilkdropLibrary
     }
     void RefreshCollections()
     {
+        var grouped=entries.ToLookup(entry=>entry.Collection);
         foreach(var collection in collections)
         {
-            var presets=entries.Where(entry=>entry.Collection==collection).ToArray();
+            var presets=grouped[collection].ToArray();
             collection.RequiresTextures=presets.Any(entry=>entry.Analysis.RequiresTextures);
             collection.CheckIncomplete=presets.Any(entry=>entry.Analysis.Incomplete);
             collection.MissingTextures=presets.SelectMany(entry=>entry.Analysis.MissingFrom(collection.TextureNames)).Distinct(StringComparer.OrdinalIgnoreCase).Order().ToArray();

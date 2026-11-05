@@ -97,24 +97,25 @@ public sealed partial class MainWindow
     async Task ImportMilkdropFolders(IEnumerable<string> folders,MilkdropCollection? textureTarget=null)
     {
         if(importingMilkdrop) return;
-        importingMilkdrop=true; importMilkdropButton.IsEnabled=selectMilkdropButton.IsEnabled=newMilkdropCollectionButton.IsEnabled=milkdropList.IsEnabled=false;
-        milkdropStatus.Text="Scanning and importing folders…";
+        var paths=folders.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var progress=BeginMilkdropImport("Scanning and importing folders…"); int folderIndex=0;
         var messages=new List<string>();
         try
         {
-            foreach(string folder in folders.Distinct(StringComparer.OrdinalIgnoreCase))
+            foreach(string folder in paths)
             {
+                importBatch=$"Folder {++folderIndex}/{paths.Length} · ";
                 try
                 {
                     bool onlyTextures=textureTarget!=null&&!await Task.Run(()=>MilkdropLibrary.ContainsMilkFiles(folder));
                     if(onlyTextures)
                     {
-                        int count=await Task.Run(()=>milkdropLibrary.ImportTextures(textureTarget!,folder));
+                        int count=await Task.Run(()=>milkdropLibrary.ImportTextures(textureTarget!,folder,progress));
                         messages.Add($"Imported {count} texture(s) for {textureTarget!.Name}.");
                     }
                     else
                     {
-                        var result=await Task.Run(()=>milkdropLibrary.ImportFolder(folder));
+                        var result=await Task.Run(()=>milkdropLibrary.ImportFolder(folder,progress));
                         foreach(var entry in result.Presets.Added) entry.PropertyChanged+=MilkdropEntryChanged;
                         selectedMilkdropCollection=result.Collection;
                         messages.Add($"Created {result.Collection.Name}: {result.Presets.Added.Count} preset(s), {result.Textures} texture(s).");
@@ -130,21 +131,20 @@ public sealed partial class MainWindow
             milkdropStatus.Text=string.Join(" ",messages.Take(3))+(messages.Count>3?$" (+{messages.Count-3} more details)":"");
             milkdropStatus.ToolTip=string.Join("\n",messages);
         }
-        finally { importingMilkdrop=false; importMilkdropButton.IsEnabled=selectMilkdropButton.IsEnabled=newMilkdropCollectionButton.IsEnabled=milkdropList.IsEnabled=true; }
+        finally { EndMilkdropImport(); }
     }
     async Task ImportMilkdropTextureFolder(MilkdropCollection collection,string folder)
     {
         if(importingMilkdrop) return;
-        importingMilkdrop=true; importMilkdropButton.IsEnabled=selectMilkdropButton.IsEnabled=newMilkdropCollectionButton.IsEnabled=milkdropList.IsEnabled=false;
-        milkdropStatus.Text="Importing textures for "+collection.Name+"…";
+        var progress=BeginMilkdropImport("Importing textures for "+collection.Name+"…");
         try
         {
-            int count=await Task.Run(()=>milkdropLibrary.ImportTextures(collection,folder));
+            int count=await Task.Run(()=>milkdropLibrary.ImportTextures(collection,folder,progress));
             if(closing) return;
             RefreshMilkdropList(); RebuildVisualiserChoices();
             milkdropStatus.Text=$"Imported {count} texture(s) for {collection.Name}. "+collection.TextureDetails;
         }
         catch(Exception error) when(error is IOException or UnauthorizedAccessException or ArgumentException) { milkdropStatus.Text=error.Message; }
-        finally { importingMilkdrop=false; importMilkdropButton.IsEnabled=selectMilkdropButton.IsEnabled=newMilkdropCollectionButton.IsEnabled=milkdropList.IsEnabled=true; }
+        finally { EndMilkdropImport(); }
     }
 }

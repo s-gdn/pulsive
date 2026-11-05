@@ -1,4 +1,4 @@
-pulsive v1.2.0 - How to
+pulsive v1.2.1 - How to
 ======================
 
 RUNNING
@@ -115,7 +115,8 @@ from 3 to 600 seconds. Transition duration controls the fade, from 0 to 8 second
 zero switches immediately. A shuffled cycle avoids immediate entry repeats.
 Only the incoming visualiser renders live during a fade; the outgoing image
 is frozen to limit rendering overhead. Shuffle pauses with paused visuals,
-while the overlay is hidden or minimised, and while editing settings or menus.
+while the overlay is hidden or minimised, and while editing appearance settings
+or menus. It continues on the Shuffle page so you can monitor its timing live.
 Choosing a style manually restarts the wait. At least two entries are needed.
 
 Choose Beats (automatic BPM) under Transition timing to switch every 1-256
@@ -123,13 +124,22 @@ tracked beats instead of seconds. The default is 32 beats. A live approximate
 BPM and beat counter appear below the timing controls; fade duration stays in
 seconds. Counting starts after a fade finishes, with the same pause behaviour
 as seconds mode. Beat timing waits for a confident rhythm and stops in silence.
+Tempo detection uses time-domain RMS from consecutive 1024-sample loopback
+frames. An onset is detected when RMS rises above an adaptive moving-average
+threshold. BPM is calculated from the time between onsets, with a short history
+of consistent intervals to reject outliers and follow song changes. Detected
+onsets advance the shuffle counter; gaps do not create predicted beats, and
+brief loss of tempo lock preserves the accumulated shuffle count.
 
-Tempo detection uses the existing audio spectrum, with a rolling analysis
-window that adapts to tempo and song changes. It typically needs a few seconds
-of steady rhythm to lock or reacquire. The supported estimate is 60-200 BPM;
-irregular rhythms and subdivisions can produce half/double-time estimates.
-Switch to Seconds for material without a steady beat. Preview or audio-output
-changes, and long gaps while paused or hidden, discard the old tempo estimate.
+Live analysis runs in the audio capture callback independently of frame rate.
+It needs at least three consistent onset intervals to establish tempo and
+supports estimates from 40-240 BPM. Preview or audio-output changes reset the
+detector. Silence clears stale tempo; restoring a hidden/minimised window does
+not count the beats that occurred while it was hidden.
+
+RMS detects energy increases, so dense or heavily compressed music, weak
+transients and subdivisions can still produce missed or extra onsets and
+half/double-time estimates. Use Seconds for material without clear beats.
 
 OTHER SETTINGS
 
@@ -218,6 +228,8 @@ Preset files may be up to 8 MB each. Identical files are not duplicated within
 a collection, but may be imported into different collections for different
 textures. Duplicate display names receive numbered names. Choices persist
 across launches without deleting imported files.
+Imports show a progress bar with the current stage, file count and percentage.
+Folder scanning shows the number of files found before the totals are known.
 
 Saved user presets also remember the Pulsive colour toggle. A saved setup
 referencing a hidden or missing file falls back to Aurora until that entry is

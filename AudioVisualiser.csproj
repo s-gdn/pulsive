@@ -9,7 +9,7 @@
     <RootNamespace>Pulsive</RootNamespace>
     <Product>pulsive</Product>
     <Title>pulsive</Title>
-    <Version>1.2.0</Version>
+    <Version>1.2.1</Version>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>assets/pulsive.ico</ApplicationIcon>
     <PlatformTarget>x64</PlatformTarget>

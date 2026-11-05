@@ -177,6 +177,9 @@ public sealed partial class MainWindow
         milkdropColorsToggle=new CheckBox { Content="Use pulsive colors for MilkDrop",IsChecked=prefs.UsePulsiveColorsForMilkdrop,Foreground=TextColor,FontSize=12,Margin=new Thickness(0,16,0,0) };
         milkdropColorsToggle.Click+=(_,_)=> { prefs.UsePulsiveColorsForMilkdrop=milkdropColorsToggle.IsChecked==true; visual.UsePulsiveColorsForMilkdrop=prefs.UsePulsiveColorsForMilkdrop; visual.InvalidateVisual(); Save(); };
         page.Children.Add(milkdropColorsToggle);
+        milkdropImportBar=BuildMilkdropImportBar();
+        milkdropImportLabel=new TextBlock { FontSize=11,Foreground=MutedColor,Margin=new Thickness(0,0,0,4),Visibility=Visibility.Collapsed,TextTrimming=TextTrimming.CharacterEllipsis };
+        var progressGroup=new StackPanel(); progressGroup.Children.Add(milkdropImportLabel); progressGroup.Children.Add(milkdropImportBar); page.Children.Insert(3,progressGroup);
         milkdropStatus=new TextBlock { Text=milkdropLibrary.LoadError??"Imported files are copied into your local Pulsive library.",FontSize=11,Foreground=MutedColor,TextWrapping=TextWrapping.Wrap,Margin=new Thickness(0,12,0,0) };
         page.Children.Add(milkdropStatus);
         foreach(var entry in milkdropLibrary.Entries) entry.PropertyChanged+=MilkdropEntryChanged;
@@ -188,12 +191,13 @@ public sealed partial class MainWindow
     void RefreshMilkdropList()
     {
         var rows=new List<MilkdropRow>();
+        var grouped=milkdropLibrary.Entries.ToLookup(entry=>entry.Collection);
         foreach(var collection in milkdropLibrary.Collections.OrderBy(c=>c.Id=="bundled"?0:c.Id=="imported"?1:2).ThenBy(c=>c.Name,StringComparer.OrdinalIgnoreCase))
         {
             rows.Add(new("Collection",collection));
             if(!collection.IsExpanded) continue;
             rows.Add(new("Textures",collection));
-            rows.AddRange(milkdropLibrary.Entries.Where(entry=>entry.Collection==collection).OrderBy(entry=>entry.Name,StringComparer.OrdinalIgnoreCase).Select(entry=>new MilkdropRow("Preset",collection,entry)));
+            rows.AddRange(grouped[collection].OrderBy(entry=>entry.Name,StringComparer.OrdinalIgnoreCase).Select(entry=>new MilkdropRow("Preset",collection,entry)));
         }
         milkdropList.ItemsSource=rows;
         UpdateMilkdropCount();
@@ -223,11 +227,10 @@ public sealed partial class MainWindow
         if(importingMilkdrop) return;
         var paths=files.ToArray(); if(paths.Length==0) return;
         string collectionId=(target??selectedMilkdropCollection)?.Id??"imported";
-        importingMilkdrop=true; importMilkdropButton.IsEnabled=selectMilkdropButton.IsEnabled=newMilkdropCollectionButton.IsEnabled=milkdropList.IsEnabled=false;
-        milkdropStatus.Text="Importing MilkDrop presets…";
+        var progress=BeginMilkdropImport("Importing MilkDrop presets…");
         try
         {
-            var result=await Task.Run(()=>milkdropLibrary.Import(paths,collectionId));
+            var result=await Task.Run(()=>milkdropLibrary.Import(paths,collectionId,progress));
             if(closing) return;
             foreach(var entry in result.Added) entry.PropertyChanged+=MilkdropEntryChanged;
             RefreshMilkdropList(); SyncMilkdropVisibility();
@@ -235,8 +238,7 @@ public sealed partial class MainWindow
         }
         finally
         {
-            importingMilkdrop=false;
-            importMilkdropButton.IsEnabled=selectMilkdropButton.IsEnabled=newMilkdropCollectionButton.IsEnabled=milkdropList.IsEnabled=true;
+            EndMilkdropImport();
         }
     }
 }

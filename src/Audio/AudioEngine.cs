@@ -15,8 +15,7 @@ public sealed class AudioEngine : IDisposable
     readonly MMDeviceEnumerator enumerator = new();
     string? selectedId;
     DateTime lastPacket;
-    double lastBeatUpdate=double.NaN;
-    bool lastBeatDemo;
+    volatile bool demo;
     public string Status { get; private set; } = "Starting audio…";
     public string DeviceName { get; private set; } = "Default output";
     public float[] Bands { get; } = new float[96];
@@ -27,7 +26,11 @@ public sealed class AudioEngine : IDisposable
     public float Bass { get; private set; }
     internal BeatTracker Beats { get; }=new();
     public float Gain { get; set; } = 1.5f;
-    public bool Demo { get; set; }
+    public bool Demo
+    {
+        get=>demo;
+        set { lock(gate) { if(demo==value) return; demo=value; Beats.Reset(); } }
+    }
     public bool HasAudio => DateTime.UtcNow - lastPacket < TimeSpan.FromSeconds(1) && Level > .002f;
     public List<(string Id, string Name)> Devices() => enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).Select(d => { using(d) return (d.ID, d.FriendlyName); }).ToList();
 
@@ -57,12 +60,14 @@ public sealed class AudioEngine : IDisposable
 
     void OnData(object? sender, WaveInEventArgs e)
     {
+        if(e.BytesRecorded==0) return;
         var format = capture?.WaveFormat;
         if (format is null) return;
         int bytes = format.BitsPerSample / 8;
         bool isFloat = format.Encoding == WaveFormatEncoding.IeeeFloat || (format is WaveFormatExtensible ext && ext.SubFormat == new Guid("00000003-0000-0010-8000-00aa00389b71"));
         lock (gate)
         {
+            int beatStart=position;
             for (int i = 0; i + format.BlockAlign <= e.BytesRecorded; i += format.BlockAlign)
             {
                 float sample = 0;
@@ -79,18 +84,31 @@ public sealed class AudioEngine : IDisposable
                 }
                 samples[position] = float.IsFinite(sample) ? sample / format.Channels : 0;
                 position = (position + 1) % Size;
+                if(position==0)
+                {
+                    if(!demo) Beats.ProcessSamples(samples.AsSpan(beatStart,Size-beatStart),format.SampleRate);
+                    beatStart=0;
+                }
             }
+            if(!demo&&position>beatStart) Beats.ProcessSamples(samples.AsSpan(beatStart,position-beatStart),format.SampleRate);
             lastPacket = DateTime.UtcNow;
         }
     }
 
     public void Update(double time, double dt)
     {
-        if(Demo!=lastBeatDemo||time-lastBeatUpdate>.5||time<lastBeatUpdate) Beats.Reset();
-        lastBeatUpdate=time; lastBeatDemo=Demo;
         float[] snapshot = new float[Size];
-        lock(gate) { for (int i = 0; i < Size; i++) snapshot[i] = samples[(position + i) % Size]; }
-        if (Demo) for (int i = 0; i < Size; i++) snapshot[i] = (float)(.22 * Math.Sin(i * .008 + time * 6) * (.5 + .5 * Math.Sin(time * 3)) + .09 * Math.Sin(i * .16 + time * 4));
+        lock(gate)
+        {
+            for(int i=0;i<Size;i++) snapshot[i]=samples[(position+i)%Size];
+            if(!demo&&DateTime.UtcNow-lastPacket>TimeSpan.FromSeconds(2)) Beats.MarkSilent();
+        }
+        if (Demo)
+        {
+            double envelope=.3*Math.Exp(-(time%.5)*20);
+            for(int i=0;i<Size;i++) snapshot[i]=(float)(envelope*Math.Sin(i*Math.Tau*70/48000d)+.02*Math.Sin(i*Math.Tau*440/48000d));
+            Beats.AdvanceRms(Math.Sqrt(envelope*envelope/2+.0002),dt);
+        }
         else if (DateTime.UtcNow - lastPacket > TimeSpan.FromMilliseconds(180)) Array.Clear(snapshot);
         Analyze(snapshot, capture?.WaveFormat.SampleRate ?? 48000, dt);
     }
@@ -103,7 +121,6 @@ public sealed class AudioEngine : IDisposable
         double energy = 0;
         for (int i = 0; i < Size; i++) { energy += snapshot[i] * snapshot[i]; fft[i].X = snapshot[i] * (float)(.5 - .5 * Math.Cos(2 * Math.PI * i / (Size - 1))); }
         FastFourierTransform.FFT(true, 11, fft);
-        Beats.Analyze(fft,sampleRate,Math.Sqrt(energy/Size),dt);
         float blend = (float)(1 - Math.Exp(-dt * 18));
         Level += ((float)Math.Min(1, Math.Sqrt(energy / Size) * Gain * 3) - Level) * blend;
         for (int i = 0; i < Wave.Length; i++) Wave[i] += (snapshot[i * Size / Wave.Length] * Gain - Wave[i]) * blend;

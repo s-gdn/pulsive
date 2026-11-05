@@ -32,6 +32,8 @@ public sealed partial class MainWindow
         bar.RowDefinitions.Add(new RowDefinition { Height=GridLength.Auto });
         bar.RowDefinitions.Add(new RowDefinition { Height=GridLength.Auto });
         SizeChanged+=(_,_)=>UpdateCompactToolbar();
+        IsVisibleChanged+=(_,_)=>lastShuffleBeat=audio.Beats.BeatCount;
+        StateChanged+=(_,_)=>lastShuffleBeat=audio.Beats.BeatCount;
         root.Children.Insert(root.Children.IndexOf(toolbar),nowPlayingText);
         var content=new StackPanel();
         content.Children.Add(new TextBlock { Text="NOW PLAYING",FontSize=10,Foreground=AccentColor,FontWeight=FontWeights.SemiBold,Margin=new Thickness(0,0,0,8) });

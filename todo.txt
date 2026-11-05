@@ -5,4 +5,7 @@
 - [x] Make a shuffle feature that transitions between visualiser styles when enabled. By default shuffles through users whole preset library, but a new tab in settings called shuffle will have a listbox in same style as the one in milkdrop tab where user can select which presets are included in the shuffle. Also has transition speed and time between transition options.
 - [x] Update watermark text version number from 1.0.0 to 1.2.0
 
-- Automatic bpm detection does not work.
+- [x] Automatic bpm detection does not work. It comes up with a bpm but then attempts to get again very often, meaning the transition never actually happens, and definitely not on time.
+- [x] Adding many .milk files causes extreme lag constantly when pulsive is open. We need to find a way to stop that.
+- [x] Add a loading bar that displays the progress of an import, because adding many .milk files can take a long time.
+- [x] Dragging the program window looks like it is low fps. But when not being dragged it is fine. Attempt a fix.

@@ -151,7 +151,9 @@ public sealed partial class MainWindow
     }
     void UpdateShuffle(double dt)
     {
-        long beat=audio.Beats.BeatCount;
+        var beatState=audio.Beats.State;
+        long beat=beatState.BeatCount;
+        if(beat<lastShuffleBeat) shuffleBeatElapsed=0;
         int newBeats=(int)Math.Clamp(beat-lastShuffleBeat,0,16); lastShuffleBeat=beat;
         UpdateShuffleTempoStatus();
         if(transitioning)
@@ -164,10 +166,10 @@ public sealed partial class MainWindow
             if(progress>=1) { ClearShuffleTransition(); shuffleElapsed=0; shuffleBeatElapsed=0; }
             return;
         }
-        if(!prefs.ShuffleEnabled||dt<=0||settingsOpen||presetDialog?.IsVisible==true||ContextMenu.IsOpen||selectors.Any(s=>s.IsDropDownOpen)||colorPickers.Any(p=>p.IsPickerOpen)) return;
+        if(!prefs.ShuffleEnabled||dt<=0||importingMilkdrop||(settingsOpen&&!Equals(shuffleSettingsTab.Tag,"ActivePage"))||presetDialog?.IsVisible==true||ContextMenu.IsOpen||selectors.Any(s=>s.IsDropDownOpen)||colorPickers.Any(p=>p.IsPickerOpen)) return;
         if(prefs.ShuffleTimingMode==1)
         {
-            if(!audio.Beats.IsLocked) { shuffleBeatElapsed=0; return; }
+            if(!beatState.IsLocked) return;
             shuffleBeatElapsed+=newBeats;
             if(shuffleBeatElapsed<prefs.ShuffleBeats) return;
         }
@@ -187,7 +189,7 @@ public sealed partial class MainWindow
     void UpdateShuffleTempoStatus()
     {
         if(shuffleTempoStatus==null||prefs.ShuffleTimingMode!=1) return;
-        string status=audio.Beats.IsLocked?$"≈ {audio.Beats.Bpm:0} BPM · {shuffleBeatElapsed}/{prefs.ShuffleBeats} beats":"Detecting tempo… Waiting for a steady rhythm. No beat transitions during silence.";
+        string status=audio.Beats.IsLocked?$"≈ {audio.Beats.Bpm:0} BPM · {shuffleBeatElapsed}/{prefs.ShuffleBeats} beats":audio.Beats.Bpm>0?$"≈ {audio.Beats.Bpm:0} BPM · {shuffleBeatElapsed}/{prefs.ShuffleBeats} beats · Waiting for rhythm":"Detecting tempo… Waiting for a steady rhythm. No beat transitions during silence.";
         if(shuffleTempoStatus.Text!=status) shuffleTempoStatus.Text=status;
     }
     void StartShuffleTransition(string id)

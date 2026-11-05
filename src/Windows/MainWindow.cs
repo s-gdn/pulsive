@@ -101,7 +101,7 @@ public sealed partial class MainWindow : Window
         var brand = new StackPanel { Orientation=Orientation.Horizontal, VerticalAlignment=VerticalAlignment.Center };
         var wordmark = new StackPanel { VerticalAlignment=VerticalAlignment.Center };
         wordmark.Children.Add(new TextBlock { Text="pulsive", FontSize=13, FontWeight=FontWeights.SemiBold,TextAlignment=TextAlignment.Center });
-        wordmark.Children.Add(new TextBlock { Text="v1.2.0", FontSize=8,TextAlignment=TextAlignment.Center });
+        wordmark.Children.Add(new TextBlock { Text="v1.2.1", FontSize=8,TextAlignment=TextAlignment.Center });
         brand.Children.Add(wordmark); bar.Children.Add(new BackdropSurface { Child=brand,Padding=new Thickness(12,2,12,2),Height=34,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(0,0,8,0),CornerRadius=new CornerRadius(17) });
         brand.MouseLeftButtonDown += Drag;
         modeSelect = Select([], -1,118);
@@ -278,6 +278,9 @@ public sealed partial class MainWindow : Window
           <Setter Property="Foreground" Value="#E9F1FF"/>
           <Setter Property="FontSize" Value="12"/>
           <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+          <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True"/>
+          <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling"/>
+          <Setter Property="ItemsPanel"><Setter.Value><ItemsPanelTemplate><VirtualizingStackPanel/></ItemsPanelTemplate></Setter.Value></Setter>
           <Setter Property="ItemContainerStyle">
             <Setter.Value><Style TargetType="ComboBoxItem">
               <Setter Property="Foreground" Value="#E9F1FF"/>
@@ -304,7 +307,7 @@ public sealed partial class MainWindow : Window
               <ContentPresenter x:Name="Selection" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" Margin="24,0,24,0" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" TextBlock.TextAlignment="Center"/>
               <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
                 <local:BackdropSurface Adaptive="False" TintOpacity="0.85" BlurRadius="14" HoverHighlight="False" CornerRadius="20" Padding="8" Margin="0,6,0,0" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
-                  <ScrollViewer Style="{DynamicResource PulsiveScrollViewer}" MaxHeight="260" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer>
+                  <ScrollViewer Style="{DynamicResource PulsiveScrollViewer}" CanContentScroll="True" MaxHeight="260" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer>
                 </local:BackdropSurface>
               </Popup>
             </Grid>
@@ -504,8 +507,8 @@ public sealed partial class MainWindow : Window
             if(toolbarDragging&&!closing&&IsVisible&&WindowState==WindowState.Normal)
             {
                 var delta=screenPoint-toolbarDragStart;
-                var transform=PresentationSource.FromVisual(this).CompositionTarget.TransformFromDevice;
-                Left=toolbarDragOrigin.X+delta.X*transform.M11; Top=toolbarDragOrigin.Y+delta.Y*transform.M22;
+                SetFullscreenWindowPos(new WindowInteropHelper(this).Handle,IntPtr.Zero,(int)Math.Round(toolbarDragOrigin.X+delta.X),(int)Math.Round(toolbarDragOrigin.Y+delta.Y),0,0,0x0015);
+                backdrops.RefreshNative();
                 if(delta.Length>5) lastToolbarPress=0;
             }
             if(phase==2) toolbarDragging=false;
@@ -526,7 +529,7 @@ public sealed partial class MainWindow : Window
             var point=PointFromScreen(screenPoint); Left+=point.X-Width*fraction; Top+=point.Y-32;
         }
         Activate(); toolbarDragging=true;
-        toolbarDragStart=screenPoint; toolbarDragOrigin=new Point(Left,Top);
+        toolbarDragStart=screenPoint; toolbarDragOrigin=PointToScreen(new Point());
     }
     void UpdateHoverControls()
     {
