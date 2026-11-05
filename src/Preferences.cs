@@ -29,6 +29,12 @@ public class AppearanceSettings
     public string CustomColorEnd { get; set; } = "#C17AFF";
     public int BorderType { get; set; }
     public string BorderColor { get; set; } = "#68EFDE";
+    public bool ShowNowPlaying { get; set; }
+    public int NowPlayingPosition { get; set; } = 1;
+    public int NowPlayingFormat { get; set; }
+    public double NowPlayingSize { get; set; } = 16;
+    public double NowPlayingOpacity { get; set; } = .9;
+    public string NowPlayingColor { get; set; } = "#EBEDF0";
 }
 
 public sealed class Preferences : AppearanceSettings
@@ -47,4 +53,10 @@ public sealed class Preferences : AppearanceSettings
     public bool ToolbarLocked { get; set; }
     public string? ActivePresetId { get; set; }
     public List<string> DisabledMilkdropPresets { get; set; }=[];
+    public bool ShuffleEnabled { get; set; }
+    public double ShuffleInterval { get; set; } = 30;
+    public double ShuffleTransition { get; set; } = 1.5;
+    public int ShuffleTimingMode { get; set; }
+    public int ShuffleBeats { get; set; } = 32;
+    public List<string> ExcludedShufflePresets { get; set; } = [];
 }

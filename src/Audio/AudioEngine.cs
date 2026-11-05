@@ -15,6 +15,8 @@ public sealed class AudioEngine : IDisposable
     readonly MMDeviceEnumerator enumerator = new();
     string? selectedId;
     DateTime lastPacket;
+    double lastBeatUpdate=double.NaN;
+    bool lastBeatDemo;
     public string Status { get; private set; } = "Starting audio…";
     public string DeviceName { get; private set; } = "Default output";
     public float[] Bands { get; } = new float[96];
@@ -23,6 +25,7 @@ public sealed class AudioEngine : IDisposable
     internal long PcmVersion { get; private set; }
     public float Level { get; private set; }
     public float Bass { get; private set; }
+    internal BeatTracker Beats { get; }=new();
     public float Gain { get; set; } = 1.5f;
     public bool Demo { get; set; }
     public bool HasAudio => DateTime.UtcNow - lastPacket < TimeSpan.FromSeconds(1) && Level > .002f;
@@ -83,6 +86,8 @@ public sealed class AudioEngine : IDisposable
 
     public void Update(double time, double dt)
     {
+        if(Demo!=lastBeatDemo||time-lastBeatUpdate>.5||time<lastBeatUpdate) Beats.Reset();
+        lastBeatUpdate=time; lastBeatDemo=Demo;
         float[] snapshot = new float[Size];
         lock(gate) { for (int i = 0; i < Size; i++) snapshot[i] = samples[(position + i) % Size]; }
         if (Demo) for (int i = 0; i < Size; i++) snapshot[i] = (float)(.22 * Math.Sin(i * .008 + time * 6) * (.5 + .5 * Math.Sin(time * 3)) + .09 * Math.Sin(i * .16 + time * 4));
@@ -98,6 +103,7 @@ public sealed class AudioEngine : IDisposable
         double energy = 0;
         for (int i = 0; i < Size; i++) { energy += snapshot[i] * snapshot[i]; fft[i].X = snapshot[i] * (float)(.5 - .5 * Math.Cos(2 * Math.PI * i / (Size - 1))); }
         FastFourierTransform.FFT(true, 11, fft);
+        Beats.Analyze(fft,sampleRate,Math.Sqrt(energy/Size),dt);
         float blend = (float)(1 - Math.Exp(-dt * 18));
         Level += ((float)Math.Min(1, Math.Sqrt(energy / Size) * Gain * 3) - Level) * blend;
         for (int i = 0; i < Wave.Length; i++) Wave[i] += (snapshot[i * Size / Wave.Length] * Gain - Wave[i]) * blend;
@@ -112,6 +118,6 @@ public sealed class AudioEngine : IDisposable
         }
         Bass = Bands.Take(22).Average();
     }
-    void Stop() { if(capture != null) { capture.DataAvailable -= OnData; capture.StopRecording(); capture.Dispose(); capture = null; } device?.Dispose(); device = null; lock(gate) Array.Clear(samples); }
+    void Stop() { if(capture != null) { capture.DataAvailable -= OnData; capture.StopRecording(); capture.Dispose(); capture = null; } device?.Dispose(); device = null; lock(gate) Array.Clear(samples); Beats.Reset(); }
     public void Dispose() { Stop(); enumerator.Dispose(); }
 }

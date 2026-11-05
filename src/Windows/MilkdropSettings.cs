@@ -35,6 +35,7 @@ public sealed partial class MainWindow
             RestoreVisualMode(prefs.Mode,prefs.MilkdropPresetId);
         }
         finally { syncingVisualModes=false; }
+        RefreshShuffleList();
     }
     void RestoreVisualMode(int mode,string? id)
     {
@@ -84,24 +85,10 @@ public sealed partial class MainWindow
         VirtualizingPanel.SetIsVirtualizing(milkdropList,true);
         VirtualizingPanel.SetVirtualizationMode(milkdropList,VirtualizationMode.Recycling);
         VirtualizingPanel.SetScrollUnit(milkdropList,ScrollUnit.Pixel);
-        milkdropList.Resources.Add(typeof(System.Windows.Controls.Primitives.ScrollBar),(Style)XamlReader.Parse("""
-        <Style xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" TargetType="ScrollBar">
-          <Setter Property="Width" Value="10"/><Setter Property="Background" Value="Transparent"/>
-          <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar">
-            <Grid Background="Transparent" Margin="0,3">
-              <Track x:Name="PART_Track" IsDirectionReversed="True" Orientation="Vertical" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{TemplateBinding Value}" ViewportSize="{TemplateBinding ViewportSize}">
-                <Track.DecreaseRepeatButton><RepeatButton Command="{x:Static ScrollBar.PageUpCommand}" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent"/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton>
-                <Track.Thumb><Thumb MinHeight="22"><Thumb.Template><ControlTemplate TargetType="Thumb"><Border Background="#60DDE1E8" CornerRadius="3" Margin="3,0,1,0"/></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
-                <Track.IncreaseRepeatButton><RepeatButton Command="{x:Static ScrollBar.PageDownCommand}" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent"/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton>
-              </Track>
-            </Grid>
-          </ControlTemplate></Setter.Value></Setter>
-        </Style>
-        """));
         milkdropList.Template=(ControlTemplate)XamlReader.Parse("""
         <ControlTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" TargetType="ListBox">
           <Border CornerRadius="16" Background="#15000000" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
-            <ScrollViewer Focusable="False" CanContentScroll="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><ItemsPresenter/></ScrollViewer>
+            <ScrollViewer Style="{DynamicResource PulsiveScrollViewer}" Focusable="False" CanContentScroll="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><ItemsPresenter/></ScrollViewer>
           </Border>
         </ControlTemplate>
         """);

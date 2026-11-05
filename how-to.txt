@@ -1,4 +1,4 @@
-pulsive v1.0.0 - How to
+pulsive v1.2.0 - How to
 ======================
 
 RUNNING
@@ -23,6 +23,8 @@ WINDOW AND TOOLBAR
 Hover inside the overlay to reveal its toolbar. Drag the wordmark or empty
 space in the toolbar row to move the window. Double-click a draggable toolbar
 area to maximise or restore. Drag an edge or corner to resize.
+The minimum overlay size is 340 x 180. At narrow widths, the preset picker
+moves to a second toolbar row and the wordmark hides to keep controls apart.
 
 Right-click anywhere inside the window, including transparent areas, for
 settings, background and border options, or Lock toolbar hidden. Unlock it
@@ -36,6 +38,7 @@ Taskbar commands work while the overlay is hidden or minimised.
 
 Open settings with the gear button or right-click > Settings. Settings is a
 separate resizable window: closing it leaves the visualiser running.
+The settings header and page tabs stay visible; only the selected page scrolls.
 Closing the main overlay exits Pulsive.
 
 KEYBOARD SHORTCUTS
@@ -45,7 +48,8 @@ Space            Pause / resume visuals
 S                Toggle settings
 D                Toggle generated audio preview
 T                Toggle always on top
-Esc              Close settings when focused; quit from the overlay
+F11              Toggle fullscreen on the current monitor (covers the taskbar)
+Esc              Leave fullscreen; otherwise close settings or quit the overlay
 Ctrl + Alt + P   Globally show / hide; restore if minimised
 
 APPEARANCE SETTINGS
@@ -86,6 +90,46 @@ the centre's opacity. Feather bounding box controls where the fade starts:
 each edge can be inset from 0% to 100%. Opposing insets totalling 100% or more
 hide the visuals. Both controls have independent Link all sides toggles.
 Neither affects the background blur, border, or toolbar.
+
+Now playing:
+Enable Show now playing in Appearance to display the current media title.
+Choose its position, title/artist format, text size, opacity and colour. This
+uses Windows system media controls, including Spotify and supported browsers
+playing YouTube or other media. Apps must expose their media metadata to
+Windows; audio alone cannot provide a title. No available title shows Unknown.
+Pulsive prefers a playing session; with several playing apps, Windows' current
+session takes priority. Metadata is checked once a second only while enabled.
+The text stays independent of visualiser feathering and is saved in user presets.
+
+SHUFFLE SETTINGS
+
+Enable Shuffle visualisers and presets on the Shuffle tab. All available
+built-in styles, enabled MilkDrop entries, Default and saved user presets are
+included initially. Check individual entries or use Select all / Unselect all.
+MilkDrop entries disabled on the MilkDrop tab do not enter the shuffle list.
+New imports and saved presets are included automatically. Exclusions persist.
+Choosing a saved user preset applies all its appearance settings.
+
+Time between transitions controls the wait after each completed transition,
+from 3 to 600 seconds. Transition duration controls the fade, from 0 to 8 seconds;
+zero switches immediately. A shuffled cycle avoids immediate entry repeats.
+Only the incoming visualiser renders live during a fade; the outgoing image
+is frozen to limit rendering overhead. Shuffle pauses with paused visuals,
+while the overlay is hidden or minimised, and while editing settings or menus.
+Choosing a style manually restarts the wait. At least two entries are needed.
+
+Choose Beats (automatic BPM) under Transition timing to switch every 1-256
+tracked beats instead of seconds. The default is 32 beats. A live approximate
+BPM and beat counter appear below the timing controls; fade duration stays in
+seconds. Counting starts after a fade finishes, with the same pause behaviour
+as seconds mode. Beat timing waits for a confident rhythm and stops in silence.
+
+Tempo detection uses the existing audio spectrum, with a rolling analysis
+window that adapts to tempo and song changes. It typically needs a few seconds
+of steady rhythm to lock or reacquire. The supported estimate is 60-200 BPM;
+irregular rhythms and subdivisions can produce half/double-time estimates.
+Switch to Seconds for material without a steady beat. Preview or audio-output
+changes, and long gaps while paused or hidden, discard the old tempo estimate.
 
 OTHER SETTINGS
 

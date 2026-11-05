@@ -1,0 +1,8 @@
+- [x] Make minimum resize width and height smaller without overlapping ui elements
+- [x] Add a toggleable and customisable now playing text, which detects song name / whatever is playing from major platform like youtube, spotify etc. If it cant detect, display unknown
+- [x] Add a true fullscreen mode on hotkey
+- [x] Current dropbox styling needs scrollbar styling too, simple grey thin bar will do
+- [x] Make a shuffle feature that transitions between visualiser styles when enabled. By default shuffles through users whole preset library, but a new tab in settings called shuffle will have a listbox in same style as the one in milkdrop tab where user can select which presets are included in the shuffle. Also has transition speed and time between transition options.
+- [x] Update watermark text version number from 1.0.0 to 1.2.0
+
+- Automatic bpm detection does not work.

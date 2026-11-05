@@ -8,6 +8,7 @@ A transparent Windows audio visualiser that reacts to sound from other applicati
 - Custom gradients, zoom, adjustable feathering, and saved user presets.
 - Optional background blur or solid colour, plus gradient and reactive glow borders.
 - Resizable overlay with hover controls, toolbar locking, and optional startup on sign-in.
+- Fullscreen, customisable now-playing text, and shuffle with selectable presets and timed transitions.
 
 Download the zip from the [latest release](https://github.com/s-gdn/pulsive/releases/latest) and simply extract. Ensure the exe and dlls stay in same folder. Then just run Pulsive.exe.
 

@@ -9,6 +9,7 @@ namespace Pulsive;
 public sealed partial class MainWindow
 {
     Window settingsWindow=null!;
+    ScrollViewer settingsPageScroll=null!;
     static readonly string[] BackgroundTypes=["None","Solid color","Blur"];
     ComboBox settingsBackgroundSelect=null!,backgroundBlurMenuSelect=null!;
     FrameworkElement settingsBlurGroup=null!;
@@ -31,8 +32,15 @@ public sealed partial class MainWindow
             FontFamily=FontFamily,Foreground=TextColor,Content=panel
         };
         settingsWindow.Resources.MergedDictionaries.Add(Resources);
-        var controls=panel.Child; panel.Child=null;
-        panel.Child=new ScrollViewer { Content=controls,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled };
+        var controls=(StackPanel)panel.Child; panel.Child=null;
+        var sections=controls.Children.Cast<UIElement>().ToArray(); controls.Children.Clear();
+        var fixedHeader=new StackPanel { Margin=new Thickness(22,17,22,0) };
+        fixedHeader.Children.Add(sections[0]); fixedHeader.Children.Add(sections[1]);
+        var pages=new StackPanel { Margin=new Thickness(22,0,22,17) };
+        foreach(var section in sections.Skip(2)) pages.Children.Add(section);
+        settingsPageScroll=new ScrollViewer { Content=pages,ClipToBounds=true,Style=(Style)Resources["PulsiveScrollViewer"],VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled };
+        var layout=new Grid(); layout.RowDefinitions.Add(new RowDefinition { Height=GridLength.Auto }); layout.RowDefinitions.Add(new RowDefinition());
+        layout.Children.Add(fixedHeader); Grid.SetRow(settingsPageScroll,1); layout.Children.Add(settingsPageScroll); panel.Child=layout;
         heading.Background=Brushes.Transparent;
         heading.MouseLeftButtonDown+=(_,e)=> { if(e.OriginalSource is TextBlock||ReferenceEquals(e.OriginalSource,heading)) settingsWindow.DragMove(); };
         heading.ColumnDefinitions.Add(new ColumnDefinition { Width=GridLength.Auto });

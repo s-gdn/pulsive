@@ -77,6 +77,7 @@ public sealed partial class MainWindow
         try { toolbarPresets.ItemsSource=presetOptions; settingsPresets.ItemsSource=presetOptions; }
         finally { syncingPresets=false; }
         SyncPresetSelection();
+        RefreshShuffleList();
     }
     void SyncPresetSelection()
     {
@@ -144,6 +145,7 @@ public sealed partial class MainWindow
     {
         var settings=id==PresetLibrary.DefaultId?PresetLibrary.Default:presetLibrary!.Presets.FirstOrDefault(p=>p.Id==id)?.Settings;
         if(settings==null) return;
+        ManualVisualChange();
         applyingPreset=true;
         try
         {
@@ -170,6 +172,7 @@ public sealed partial class MainWindow
             }
             finally { updatingFeather=false; }
             UpdateFeather(); UpdateBorder(); visual.InvalidateVisual(); prefs.ActivePresetId=id; isPresetDirty=false;
+            SyncNowPlayingSettings();
         }
         finally { applyingPreset=false; }
         TrackPresetChanges(); Save();

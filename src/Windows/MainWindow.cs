@@ -73,8 +73,8 @@ public sealed partial class MainWindow : Window
         prefs.BackgroundBlur=prefs.BackgroundType==2;
         Title = ToolbarMenus.WindowTitle;
         Icon=System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/assets/pulsive.ico",UriKind.Absolute));
-        Width = Math.Clamp(prefs.Width,720,2400); Height = Math.Clamp(prefs.Height,340,1600);
-        MinWidth = 720; MinHeight = 340; WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        Width = Math.Clamp(prefs.Width,340,2400); Height = Math.Clamp(prefs.Height,180,1600);
+        MinWidth = 340; MinHeight = 180; WindowStartupLocation = WindowStartupLocation.CenterScreen;
         WindowStyle = WindowStyle.None; AllowsTransparency = true; Background = Brushes.Transparent;
         // Custom grips resize the overlay; a native sizing frame would draw an outline.
         ResizeMode = ResizeMode.NoResize; Topmost = prefs.Topmost;
@@ -101,7 +101,7 @@ public sealed partial class MainWindow : Window
         var brand = new StackPanel { Orientation=Orientation.Horizontal, VerticalAlignment=VerticalAlignment.Center };
         var wordmark = new StackPanel { VerticalAlignment=VerticalAlignment.Center };
         wordmark.Children.Add(new TextBlock { Text="pulsive", FontSize=13, FontWeight=FontWeights.SemiBold,TextAlignment=TextAlignment.Center });
-        wordmark.Children.Add(new TextBlock { Text="v1.0.0", FontSize=8,TextAlignment=TextAlignment.Center });
+        wordmark.Children.Add(new TextBlock { Text="v1.2.0", FontSize=8,TextAlignment=TextAlignment.Center });
         brand.Children.Add(wordmark); bar.Children.Add(new BackdropSurface { Child=brand,Padding=new Thickness(12,2,12,2),Height=34,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(0,0,8,0),CornerRadius=new CornerRadius(17) });
         brand.MouseLeftButtonDown += Drag;
         modeSelect = Select([], -1,118);
@@ -110,7 +110,7 @@ public sealed partial class MainWindow : Window
         """);
         modeSelect.Height=34;
         modeSelect.ToolTip="Visual style · ← / → to switch";
-        modeSelect.SelectionChanged += (_,_) => { if(!syncingVisualModes) { ApplyVisualChoice(modeSelect.SelectedIndex); Save(); } };
+        modeSelect.SelectionChanged += (_,_) => { if(!syncingVisualModes) { ManualVisualChange(); ApplyVisualChoice(modeSelect.SelectedIndex); Save(); } };
         RebuildVisualiserChoices();
         Grid.SetColumn(modeSelect,1); bar.Children.Add(modeSelect);
         var actions = new StackPanel { Orientation=Orientation.Horizontal, VerticalAlignment=VerticalAlignment.Center };
@@ -139,11 +139,16 @@ public sealed partial class MainWindow : Window
         var appearance=new StackPanel();
         var edgeSettings=new StackPanel { Visibility=Visibility.Collapsed };
         var milkdropPage=BuildMilkdropPage();
-        var pages=new[] { appearance,milkdropPage,edgeSettings };
-        var pageButtons=new[] { appearanceTab,milkdropSettingsTab,edgeTab };
+        var shuffleTab=Button("Shuffle","Shuffle library and transitions",(_,_)=>{}); shuffleTab.Width=100; shuffleTab.FontSize=12;
+        shuffleSettingsTab=shuffleTab;
+        tabs.Children.Insert(2,shuffleTab);
+        var shufflePage=BuildShufflePage();
+        var pages=new[] { appearance,milkdropPage,shufflePage,edgeSettings };
+        var pageButtons=new[] { appearanceTab,milkdropSettingsTab,shuffleTab,edgeTab };
         foreach(var button in pageButtons) button.Content=new TextBlock { Text=button.Content.ToString() };
         void SelectSettings(int selected)
         {
+            settingsPageScroll?.ScrollToTop();
             for(int i=0;i<pages.Length;i++)
             {
                 bool active=i==selected;
@@ -155,7 +160,7 @@ public sealed partial class MainWindow : Window
                 pageButtons[i].Tag=active?"ActivePage":null;
             }
         }
-        appearanceTab.Click+=(_,_)=>SelectSettings(0); milkdropSettingsTab.Click+=(_,_)=>SelectSettings(1); edgeTab.Click+=(_,_)=>SelectSettings(2); SelectSettings(0);
+        appearanceTab.Click+=(_,_)=>SelectSettings(0); milkdropSettingsTab.Click+=(_,_)=>SelectSettings(1); shuffleTab.Click+=(_,_)=> { RefreshShuffleList(); SelectSettings(2); }; edgeTab.Click+=(_,_)=>SelectSettings(3); SelectSettings(0);
         foreach(var page in pages) controls.Children.Add(page);
         var options=new Grid { Margin=new Thickness(0,0,0,10) };
         for(int i=0;i<4;i++) options.ColumnDefinitions.Add(new ColumnDefinition());
@@ -219,6 +224,7 @@ public sealed partial class MainWindow : Window
         InitializeSettingsWindow(appearance,edgeSettings,palette,heading,windowMenu,options,featherControls.Root);
         SetBackgroundType(prefs.BackgroundType);
         InitializePresets(bar,heading);
+        InitializePlaybackFeatures(bar,appearance);
         windowMenu.Closed+=(_,_)=>backdrops.RefreshNative();
         PreviewMouseRightButtonUp+=(_,e)=>
         {
@@ -228,8 +234,8 @@ public sealed partial class MainWindow : Window
         CompositionTarget.Rendering+=Render;
         PreviewKeyDown+=OnKey;
         SourceInitialized+=(_,_)=> { var source=(HwndSource)PresentationSource.FromVisual(this); source.AddHook(WindowProc); RegisterHotKey(source.Handle,HotkeyId,0x0002|0x0001,0x50); WindowFrame.Suppress(source.Handle); ToolbarMenus.UpdateSystemMenu(source.Handle,prefs.ToolbarLocked,prefs.BackgroundBlur); areaContextMenu=new WindowAreaContextMenu(this,source.Handle,()=>presetDialog?.IsVisible==true||ContextMenu.IsOpen||colorPickers.Any(p=>p.IsPickerOpen)||selectors.Any(s=>s.IsDropDownOpen),OpenContextMenu,CanDragToolbar,BeginToolbarDrag); };
-        Loaded+=(_,_)=> { audio.Start(prefs.Device); RefreshDevices(); UpdateDemo(); ToolbarMenus.UpdateJumpList(prefs.ToolbarLocked,prefs.BackgroundBlur); };
-        Closing+=(_,_)=> { closing=true; outerGlow?.Close(); settingsWindow.Close(); Save(); hoverTimer.Stop(); areaContextMenu?.Dispose(); CompositionTarget.Rendering-=Render; visual.Dispose(); backdrops.Dispose(); audio.Dispose(); UnregisterHotKey(new WindowInteropHelper(this).Handle,HotkeyId); };
+        Loaded+=(_,_)=> { audio.Start(prefs.Device); RefreshDevices(); UpdateDemo(); ToolbarMenus.UpdateJumpList(prefs.ToolbarLocked,prefs.BackgroundBlur); UpdateCompactToolbar(); };
+        Closing+=(_,_)=> { closing=true; StopPlaybackFeatures(); outerGlow?.Close(); settingsWindow.Close(); Save(); hoverTimer.Stop(); areaContextMenu?.Dispose(); CompositionTarget.Rendering-=Render; visual.Dispose(); backdrops.Dispose(); audio.Dispose(); UnregisterHotKey(new WindowInteropHelper(this).Handle,HotkeyId); };
     }
 
     void AddStyles()
@@ -298,7 +304,7 @@ public sealed partial class MainWindow : Window
               <ContentPresenter x:Name="Selection" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" Margin="24,0,24,0" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False" TextBlock.TextAlignment="Center"/>
               <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
                 <local:BackdropSurface Adaptive="False" TintOpacity="0.85" BlurRadius="14" HoverHighlight="False" CornerRadius="20" Padding="8" Margin="0,6,0,0" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
-                  <ScrollViewer MaxHeight="260"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer>
+                  <ScrollViewer Style="{DynamicResource PulsiveScrollViewer}" MaxHeight="260" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer>
                 </local:BackdropSurface>
               </Popup>
             </Grid>
@@ -419,13 +425,16 @@ public sealed partial class MainWindow : Window
     }
     void Drag(object sender,MouseButtonEventArgs e)
     {
+        if(fullscreen) return;
         if(e.ChangedButton!=MouseButton.Left || e.Handled) return;
         if(e.ClickCount==2) ToggleMaximize();
         else { if(WindowState==WindowState.Maximized) WindowState=WindowState.Normal; DragMove(); }
     }
-    void ToggleMaximize() { MaxHeight=SystemParameters.WorkArea.Height; WindowState=WindowState==WindowState.Maximized?WindowState.Normal:WindowState.Maximized; }
+    void ToggleMaximize() { if(fullscreen) { SetFullscreen(false); return; } MaxHeight=SystemParameters.WorkArea.Height; WindowState=WindowState==WindowState.Maximized?WindowState.Normal:WindowState.Maximized; }
     void OnKey(object sender,KeyEventArgs e)
     {
+        if(e.Key==Key.F11) { SetFullscreen(!fullscreen); e.Handled=true; return; }
+        if(e.Key==Key.Escape&&fullscreen) { SetFullscreen(false); e.Handled=true; return; }
         // Let dropdowns and sliders retain their normal keyboard behaviour.
         if(e.OriginalSource is ComboBox || e.OriginalSource is Slider || e.OriginalSource is ComboBoxItem || e.OriginalSource is ButtonBase) return;
         switch(e.Key)
@@ -444,9 +453,10 @@ public sealed partial class MainWindow : Window
         if(closing || WindowState==WindowState.Minimized || !IsVisible) return;
         double now=watch.Elapsed.TotalSeconds,dt=Math.Min(.1,now-lastTime); if(dt<1d/65) return; lastTime=now;
         if(!paused) { audio.Update(now,dt); visual.Time+=dt; visual.InvalidateVisual(); }
+        UpdateShuffle(paused?0:dt);
         UpdateBorder(); overlayBorder.Update(audio.Level,audio.Bass,paused?0:dt);
         if(prefs.BorderType>=3) outerGlow??=new OuterGlowWindow(this);
-        outerGlow?.Update(prefs.BorderType,borderTint,visual.Palette,audio.Level,audio.Bass,paused?0:dt);
+        if(fullscreen) outerGlow?.Hide(); else outerGlow?.Update(prefs.BorderType,borderTint,visual.Palette,audio.Level,audio.Bass,paused?0:dt);
         if(now-lastDeviceCheck>2) { lastDeviceCheck=now; audio.CheckDefaultDevice(); }
         deviceLabel.Text=audio.Demo?"GENERATED PREVIEW · SYSTEM AUDIO IS NOT SHOWN":"SYSTEM AUDIO · "+audio.DeviceName.ToUpperInvariant();
         welcome.Visibility=now<12&&!audio.HasAudio&&!audio.Demo&&!settingsOpen?Visibility.Visible:Visibility.Collapsed;
@@ -477,7 +487,7 @@ public sealed partial class MainWindow : Window
     }
     bool CanDragToolbar(Point screenPoint)
     {
-        if(!prefs.ToolbarLocked&&!toolbar.IsHitTestVisible) return false;
+        if(fullscreen||!prefs.ToolbarLocked&&!toolbar.IsHitTestVisible) return false;
         var point=toolbar.PointFromScreen(screenPoint);
         if(point.X<0||point.Y<0||point.X>=toolbar.ActualWidth||point.Y>=toolbar.ActualHeight) return false;
         // Hidden controls cannot be clicked, so their whole toolbar row is a
@@ -527,7 +537,7 @@ public sealed partial class MainWindow : Window
             toolbar.BeginAnimation(OpacityProperty,null); toolbar.Opacity=0;
         }
         else toolbar.BeginAnimation(OpacityProperty,new DoubleAnimation(show?1:0,TimeSpan.FromMilliseconds(180)));
-        foreach(var grip in grips) grip.Visibility=hovered&&WindowState==WindowState.Normal?Visibility.Visible:Visibility.Collapsed;
+        foreach(var grip in grips) grip.Visibility=hovered&&WindowState==WindowState.Normal&&!fullscreen?Visibility.Visible:Visibility.Collapsed;
     }
     void AddGrips()
     {
@@ -547,7 +557,7 @@ public sealed partial class MainWindow : Window
             gripTemplate.VisualTree=gripSurface; thumb.Template=gripTemplate;
             thumb.DragDelta+=(_,e)=>
             {
-                if(WindowState!=WindowState.Normal) return;
+                if(WindowState!=WindowState.Normal||fullscreen) return;
                 if(horizontal==HorizontalAlignment.Left) { double width=Math.Max(MinWidth,Width-e.HorizontalChange); Left+=Width-width; Width=width; }
                 if(horizontal==HorizontalAlignment.Right) Width=Math.Max(MinWidth,Width+e.HorizontalChange);
                 if(vertical==VerticalAlignment.Top) { double height=Math.Max(MinHeight,Height-e.VerticalChange); Top+=Height-height; Height=height; }
@@ -568,7 +578,7 @@ public sealed partial class MainWindow : Window
     {
         if(visual is null||applyingPreset) return;
         prefs.Mode=visual.Mode; prefs.Palette=visual.Palette; prefs.Gain=audio.Gain; prefs.Intensity=visual.Intensity; prefs.Zoom=visual.Zoom; prefs.Topmost=Topmost;
-        prefs.Width=WindowState==WindowState.Normal?Width:RestoreBounds.Width; prefs.Height=WindowState==WindowState.Normal?Height:RestoreBounds.Height;
+        prefs.Width=fullscreen?fullscreenRestore.Width:WindowState==WindowState.Normal?Width:RestoreBounds.Width; prefs.Height=fullscreen?fullscreenRestore.Height:WindowState==WindowState.Normal?Height:RestoreBounds.Height;
         TrackPresetChanges();
         try { Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!); File.WriteAllText(SettingsPath,JsonSerializer.Serialize(prefs)); } catch { /* Preferences must never interrupt the overlay. */ }
     }

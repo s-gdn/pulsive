@@ -47,6 +47,7 @@ public sealed class Visualizer : FrameworkElement,IDisposable
     StardustRenderer? dustRenderer;
     PsychedelicRenderer? psychedelicRenderer;
     ProjectMRenderer? projectMRenderer;
+    internal bool SkipPresetTransition { get; set; }
     public void Dispose() { projectMRenderer?.Dispose(); projectMRenderer=null; }
     public void SetFeather(Thickness edges,Thickness bounds=default) => OpacityMask = EdgeFeather.CreateMask(edges,bounds);
     public Visualizer(AudioEngine audio) { Audio = audio; IsHitTestVisible = false; ClipToBounds = true; RenderOptions.SetBitmapScalingMode(this,BitmapScalingMode.LowQuality); }
@@ -101,7 +102,10 @@ public sealed class Visualizer : FrameworkElement,IDisposable
         {
             case >=11:
                 dc.PushOpacity(Math.Clamp(Intensity,0,1));
-                (projectMRenderer??=new()).Draw(dc,MilkdropPresetPath??System.IO.Path.Combine(AppContext.BaseDirectory,"projectm","presets",ProjectMRenderer.Presets[Math.Clamp(Mode-11,0,2)]+".milk"),w,h,t,Audio,UsePulsiveColorsForMilkdrop?Palette:-1,CustomStart,CustomEnd,MilkdropTextureDirectory);
+                projectMRenderer??=new();
+                projectMRenderer.SkipPresetTransition=SkipPresetTransition;
+                projectMRenderer.Draw(dc,MilkdropPresetPath??System.IO.Path.Combine(AppContext.BaseDirectory,"projectm","presets",ProjectMRenderer.Presets[Math.Clamp(Mode-11,0,2)]+".milk"),w,h,t,Audio,UsePulsiveColorsForMilkdrop?Palette:-1,CustomStart,CustomEnd,MilkdropTextureDirectory);
+                SkipPresetTransition=false;
                 dc.Pop();
                 break;
             case 0:

@@ -26,6 +26,7 @@ internal sealed class ProjectMRenderer : IDisposable
     internal string Driver=>surface?.Version??"";
     internal BitmapSource? Frame=>bitmap;
     internal bool CompatibilityRepairApplied { get; private set; }
+    internal bool SkipPresetTransition { get; set; }
 
     internal ProjectMRenderer() => loadFailed=(_,message,_)=>Error="projectM preset: "+message;
 
@@ -72,7 +73,7 @@ internal sealed class ProjectMRenderer : IDisposable
                 if(changed)
                 {
                     if(!File.Exists(file)) throw new FileNotFoundException("A projectM preset is missing. Keep the projectm folder beside Pulsive.exe.");
-                    ProjectMNative.projectm_load_preset_file(instance,file,preset!=null&&!texturesChanged);
+                    ProjectMNative.projectm_load_preset_file(instance,file,preset!=null&&!texturesChanged&&!SkipPresetTransition);
                     CompatibilityRepairApplied=false;
                     if(Error!=null)
                     {
