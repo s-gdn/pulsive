@@ -1,10 +1,22 @@
 namespace Pulsive;
 
-public class AppearanceSettings
+public class ShuffleSettings
+{
+    public bool ShuffleEnabled { get; set; }
+    public double ShuffleInterval { get; set; } = 30;
+    public double ShuffleTransition { get; set; } = 1.5;
+    public int ShuffleTimingMode { get; set; }
+    public int ShuffleBeats { get; set; } = 32;
+    public double ManualBpm { get; set; } = 120;
+    public List<string> ExcludedShufflePresets { get; set; } = [];
+}
+
+public class AppearanceSettings : ShuffleSettings
 {
     public int Mode { get; set; }
     public string? MilkdropPresetId { get; set; }
     public bool UsePulsiveColorsForMilkdrop { get; set; }
+    public bool ScaleMilkdropResolutionWithWindow { get; set; }
     public int Palette { get; set; }
     public double Gain { get; set; } = 1.5;
     public double Intensity { get; set; } = .9;
@@ -53,10 +65,4 @@ public sealed class Preferences : AppearanceSettings
     public bool ToolbarLocked { get; set; }
     public string? ActivePresetId { get; set; }
     public List<string> DisabledMilkdropPresets { get; set; }=[];
-    public bool ShuffleEnabled { get; set; }
-    public double ShuffleInterval { get; set; } = 30;
-    public double ShuffleTransition { get; set; } = 1.5;
-    public int ShuffleTimingMode { get; set; }
-    public int ShuffleBeats { get; set; } = 32;
-    public List<string> ExcludedShufflePresets { get; set; } = [];
 }

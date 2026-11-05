@@ -29,10 +29,11 @@ public sealed partial class MainWindow
     IProgress<MilkdropImportProgress> BeginMilkdropImport(string message)
     {
         importingMilkdrop=true; int generation=++importGeneration; importBatch="";
-        importMilkdropButton.IsEnabled=selectMilkdropButton.IsEnabled=newMilkdropCollectionButton.IsEnabled=milkdropList.IsEnabled=false;
+        importMilkdropButton.IsEnabled=selectMilkdropButton.IsEnabled=newMilkdropCollectionButton.IsEnabled=milkdropCollectionList.IsEnabled=milkdropList.IsEnabled=false;
         milkdropStatus.Text=message; milkdropStatus.ToolTip=null;
         milkdropImportLabel.Text=message; milkdropImportLabel.Visibility=Visibility.Visible;
         milkdropImportBar.Value=0; milkdropImportBar.IsIndeterminate=true; milkdropImportBar.Visibility=Visibility.Visible;
+        UpdateMilkdropSelection();
         return new Progress<MilkdropImportProgress>(progress=>
         {
             if(closing||!importingMilkdrop||generation!=importGeneration) return;
@@ -49,6 +50,7 @@ public sealed partial class MainWindow
         importingMilkdrop=false; importGeneration++;
         milkdropImportBar.IsIndeterminate=false; milkdropImportBar.Visibility=Visibility.Collapsed;
         milkdropImportLabel.Visibility=Visibility.Collapsed;
-        importMilkdropButton.IsEnabled=selectMilkdropButton.IsEnabled=newMilkdropCollectionButton.IsEnabled=milkdropList.IsEnabled=true;
+        importMilkdropButton.IsEnabled=selectMilkdropButton.IsEnabled=newMilkdropCollectionButton.IsEnabled=milkdropCollectionList.IsEnabled=milkdropList.IsEnabled=true;
+        UpdateMilkdropSelection();
     }
 }

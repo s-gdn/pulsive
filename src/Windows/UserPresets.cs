@@ -153,6 +153,8 @@ public sealed partial class MainWindow
             RestoreVisualMode(prefs.Mode,prefs.MilkdropPresetId);
             visual.UsePulsiveColorsForMilkdrop=prefs.UsePulsiveColorsForMilkdrop;
             milkdropColorsToggle.IsChecked=prefs.UsePulsiveColorsForMilkdrop;
+            visual.ScaleMilkdropResolutionWithWindow=prefs.ScaleMilkdropResolutionWithWindow;
+            milkdropResolutionToggle.IsChecked=prefs.ScaleMilkdropResolutionWithWindow;
             paletteSelect.SelectedIndex=Math.Clamp(prefs.Palette,0,Visualizer.Palettes.Length-1);
             sensitivitySlider.Value=Math.Clamp(prefs.Gain,.25,5); brightnessSlider.Value=Math.Clamp(prefs.Intensity,.1,1); zoomSlider.Value=Math.Clamp(prefs.Zoom,.25,4);
             visual.CustomStart=ParseColor(prefs.CustomColorStart,Visualizer.ColorForPalette(0,0,default,default));
@@ -173,6 +175,7 @@ public sealed partial class MainWindow
             finally { updatingFeather=false; }
             UpdateFeather(); UpdateBorder(); visual.InvalidateVisual(); prefs.ActivePresetId=id; isPresetDirty=false;
             SyncNowPlayingSettings();
+            if(!shuffleApplying) SyncShuffleSettings();
         }
         finally { applyingPreset=false; }
         TrackPresetChanges(); Save();

@@ -21,7 +21,8 @@ public sealed partial class MainWindow
     }
     void SetMilkdropImportTarget(MilkdropCollection collection)
     {
-        selectedMilkdropCollection=collection; UpdateMilkdropCount();
+        if(selectedMilkdropCollection==collection) return;
+        selectedMilkdropCollection=collection; milkdropList.SelectedItems.Clear(); RefreshMilkdropList();
     }
     void ShowNewMilkdropCollection()
     {
@@ -31,8 +32,8 @@ public sealed partial class MainWindow
         {
             selectedMilkdropCollection=milkdropLibrary.CreateCollection(name);
             RefreshMilkdropList();
-            var header=milkdropList.Items.OfType<MilkdropRow>().First(row=>row.Kind=="Collection"&&row.Collection==selectedMilkdropCollection);
-            milkdropList.SelectedItem=header; milkdropList.ScrollIntoView(header);
+            var header=milkdropCollectionList.Items.OfType<MilkdropRow>().First(row=>row.Kind=="Collection"&&row.Collection==selectedMilkdropCollection);
+            milkdropCollectionList.SelectedItem=header; milkdropCollectionList.ScrollIntoView(header);
         },promptTitle:"NEW COLLECTION",saveLabel:"Create");
         try { presetDialog.ShowDialog(); }
         finally { presetDialog=null; backdrops.RefreshNative(); }
@@ -41,13 +42,12 @@ public sealed partial class MainWindow
     {
         milkdropList.PreviewMouseDown+=(_,e)=>
         {
-            if(MilkdropRowAt(e.OriginalSource) is { } row) { milkdropList.SelectedItem=row; SetMilkdropImportTarget(row.Collection); }
+            if(MilkdropRowAt(e.OriginalSource) is { } row) SetMilkdropImportTarget(row.Collection);
         };
-        milkdropList.SelectionChanged+=(_,_)=> { if(milkdropList.SelectedItem is MilkdropRow row) SetMilkdropImportTarget(row.Collection); };
+        milkdropList.SelectionChanged+=(_,_)=> { if(!batchingMilkdropSelection) UpdateMilkdropSelection(); };
+        ConfigureMilkdropSelectionDrag();
         milkdropList.AddHandler(ButtonBase.ClickEvent,new RoutedEventHandler(async (_,e)=>
         {
-            if(e.OriginalSource is ToggleButton { Tag:"ToggleCollection",DataContext:MilkdropRow header })
-            { e.Handled=true; ToggleMilkdropCollection(header.Collection); return; }
             if(e.OriginalSource is not Button { Tag:"ImportTextures",DataContext:MilkdropRow row }) return;
             e.Handled=true;
             var picker=new OpenFolderDialog { Title="Import textures for "+row.Collection.Name };
@@ -55,8 +55,7 @@ public sealed partial class MainWindow
         }));
         milkdropList.PreviewKeyDown+=(_,e)=>
         {
-            if(milkdropList.SelectedItem is MilkdropRow { Kind:"Collection" } header&&e.Key is Key.Space or Key.Enter)
-            { e.Handled=true; ToggleMilkdropCollection(header.Collection); }
+            if(e.Key==Key.Delete) { DeleteMilkdropSelection(); e.Handled=true; return; }
         };
         var menu=new ContextMenu(); menu.Items.Add(new MenuItem { Header="New collection…" });
         milkdropList.ContextMenu=menu;
@@ -67,12 +66,12 @@ public sealed partial class MainWindow
             if(milkdropList.SelectedItem is MilkdropRow { Entry: { Bundled:false } entry })
             {
                 var move=new MenuItem { Header="Move to collection",IsEnabled=!importingMilkdrop };
-                foreach(var collection in milkdropLibrary.Collections)
+                foreach(var collection in milkdropLibrary.Collections.Where(collection=>collection.Id is not ("bundled" or "imported")))
                 {
-                    var item=new MenuItem { Header=collection.Name,IsEnabled=collection!=entry.Collection };
+                    var item=new MenuItem { Header=collection.Name,IsEnabled=SelectedMilkdropEntries().Any(selected=>!selected.Bundled&&selected.Collection!=collection) };
                     item.Click+=(_,_)=>
                     {
-                        try { milkdropLibrary.Move(entry,collection); RefreshMilkdropList(); RebuildVisualiserChoices(); Save(); }
+                        try { milkdropLibrary.MoveMany(SelectedMilkdropEntries().Where(item=>!item.Bundled),collection); RefreshMilkdropList(); RebuildVisualiserChoices(); Save(); }
                         catch(Exception error) when(error is IOException or UnauthorizedAccessException or ArgumentException) { milkdropStatus.Text=error.Message; }
                     };
                     move.Items.Add(item);
@@ -81,18 +80,6 @@ public sealed partial class MainWindow
             }
         };
         menu.Closed+=(_,_)=>backdrops.RefreshNative();
-    }
-    void ToggleMilkdropCollection(MilkdropCollection collection)
-    {
-        if(importingMilkdrop) return;
-        try
-        {
-            milkdropLibrary.SetExpanded(collection,!collection.IsExpanded);
-            RefreshMilkdropList();
-            var row=milkdropList.Items.OfType<MilkdropRow>().First(item=>item.Kind=="Collection"&&item.Collection==collection);
-            milkdropList.SelectedItem=row; milkdropList.ScrollIntoView(row);
-        }
-        catch(Exception error) when(error is IOException or UnauthorizedAccessException or ArgumentException) { milkdropStatus.Text=error.Message; }
     }
     async Task ImportMilkdropFolders(IEnumerable<string> folders,MilkdropCollection? textureTarget=null)
     {
@@ -126,8 +113,8 @@ public sealed partial class MainWindow
                 if(closing) return;
             }
             RefreshMilkdropList(); SyncMilkdropVisibility();
-            var header=milkdropList.Items.OfType<MilkdropRow>().FirstOrDefault(row=>row.Kind=="Collection"&&row.Collection==selectedMilkdropCollection);
-            if(header!=null) { milkdropList.SelectedItem=header; milkdropList.ScrollIntoView(header); }
+            var header=milkdropCollectionList.Items.OfType<MilkdropRow>().FirstOrDefault(row=>row.Kind=="Collection"&&row.Collection==selectedMilkdropCollection);
+            if(header!=null) { milkdropCollectionList.SelectedItem=header; milkdropCollectionList.ScrollIntoView(header); }
             milkdropStatus.Text=string.Join(" ",messages.Take(3))+(messages.Count>3?$" (+{messages.Count-3} more details)":"");
             milkdropStatus.ToolTip=string.Join("\n",messages);
         }

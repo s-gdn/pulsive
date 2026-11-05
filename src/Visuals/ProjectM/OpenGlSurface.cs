@@ -15,6 +15,7 @@ internal sealed class OpenGlSurface : IDisposable
     int pixelFormat;
     internal int Width { get; private set; }
     internal int Height { get; private set; }
+    internal int MaximumDimension { get; private set; }=4096;
     internal string Version { get; private set; }="";
     internal OpenGlSurface(int width,int height)
     {
@@ -44,6 +45,9 @@ internal sealed class OpenGlSurface : IDisposable
             wglMakeCurrent(IntPtr.Zero,IntPtr.Zero); wglDeleteContext(context); context=modern;
             MakeCurrent(); Width=width; Height=height;
             bindFramebuffer=Function<BindFramebuffer>("glBindFramebuffer");
+            glGetIntegerv(0x0D33,out int textureLimit); // GL_MAX_TEXTURE_SIZE
+            glGetIntegerv(0x84E8,out int renderbufferLimit); // GL_MAX_RENDERBUFFER_SIZE
+            MaximumDimension=Math.Max(64,Math.Min(8192,Math.Min(textureLimit,renderbufferLimit)));
             Version=Marshal.PtrToStringAnsi(glGetString(0x1F02))??"Unknown";
         }
         catch { Dispose(); throw; }
@@ -105,6 +109,7 @@ internal sealed class OpenGlSurface : IDisposable
     [DllImport("opengl32.dll")] static extern bool wglDeleteContext(IntPtr context);
     [DllImport("opengl32.dll")] static extern bool wglMakeCurrent(IntPtr dc,IntPtr context);
     [DllImport("opengl32.dll",CharSet=CharSet.Ansi)] static extern IntPtr wglGetProcAddress(string name);
+    [DllImport("opengl32.dll")] static extern void glGetIntegerv(uint name,out int value);
     [DllImport("opengl32.dll")] static extern IntPtr glGetString(uint name);
     [DllImport("opengl32.dll")] static extern void glReadBuffer(uint mode);
     [DllImport("opengl32.dll")] static extern void glReadPixels(int x,int y,int width,int height,uint format,uint type,[Out] byte[] pixels);

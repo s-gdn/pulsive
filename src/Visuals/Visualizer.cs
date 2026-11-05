@@ -28,6 +28,7 @@ public sealed class Visualizer : FrameworkElement,IDisposable
         }
     }
     public bool UsePulsiveColorsForMilkdrop { get; set; }
+    public bool ScaleMilkdropResolutionWithWindow { get; set; }
     string? milkdropTextureDirectory;
     internal string? MilkdropTextureDirectory
     {
@@ -104,6 +105,9 @@ public sealed class Visualizer : FrameworkElement,IDisposable
                 dc.PushOpacity(Math.Clamp(Intensity,0,1));
                 projectMRenderer??=new();
                 projectMRenderer.SkipPresetTransition=SkipPresetTransition;
+                projectMRenderer.ScaleResolutionWithWindow=ScaleMilkdropResolutionWithWindow;
+                var dpi=VisualTreeHelper.GetDpi(this);
+                projectMRenderer.DpiScaleX=dpi.DpiScaleX; projectMRenderer.DpiScaleY=dpi.DpiScaleY;
                 projectMRenderer.Draw(dc,MilkdropPresetPath??System.IO.Path.Combine(AppContext.BaseDirectory,"projectm","presets",ProjectMRenderer.Presets[Math.Clamp(Mode-11,0,2)]+".milk"),w,h,t,Audio,UsePulsiveColorsForMilkdrop?Palette:-1,CustomStart,CustomEnd,MilkdropTextureDirectory);
                 SkipPresetTransition=false;
                 dc.Pop();

@@ -129,15 +129,46 @@ internal sealed class MilkdropLibrary
         Write(records,collections.Append(collection)); collections.Add(collection); return collection;
     }
     internal void Move(MilkdropEntry entry,MilkdropCollection target)
+        =>MoveMany([entry],target);
+    internal void MoveMany(IEnumerable<MilkdropEntry> selected,MilkdropCollection target)
     {
         EnsureWritable();
-        if(!entries.Contains(entry)||!collections.Contains(target)) throw new ArgumentException("Select a preset and collection from this library.");
-        if(entry.Bundled) throw new ArgumentException("Bundled presets stay in the Bundled collection.");
-        var record=records.Single(r=>r.Id==entry.Id);
-        if(record.CollectionId==target.Id) return;
-        if(records.Any(r=>r.CollectionId==target.Id&&(r.ContentHash??r.Id)==(record.ContentHash??record.Id))) throw new ArgumentException("This preset is already in that collection.");
-        var updated=records.Select(r=>r.Id==entry.Id?new Record { Id=r.Id,Name=r.Name,CollectionId=target.Id,ContentHash=r.ContentHash??r.Id }:r).ToList();
-        Write(updated); records.Clear(); records.AddRange(updated); entry.Collection=target; RefreshCollections();
+        var chosen=selected.Distinct().ToArray();
+        var known=entries.ToHashSet();
+        if(!collections.Contains(target)||chosen.Any(entry=>!known.Contains(entry))) throw new ArgumentException("Select presets and a collection from this library.");
+        if(target.Id is "bundled" or "imported") throw new ArgumentException("Move presets into a custom collection. Bundled and Imported are protected destinations.");
+        if(chosen.Any(entry=>entry.Bundled)) throw new ArgumentException("Bundled presets stay in the Bundled collection.");
+        var ids=chosen.Where(entry=>entry.Collection!=target).Select(entry=>entry.Id).ToHashSet();
+        if(ids.Count==0) return;
+        var hashes=records.Where(r=>r.CollectionId==target.Id).Select(r=>r.ContentHash??r.Id).ToHashSet();
+        foreach(var record in records.Where(r=>ids.Contains(r.Id)))
+            if(!hashes.Add(record.ContentHash??record.Id)) throw new ArgumentException("The move would put duplicate presets in this collection. Nothing was moved.");
+        var updated=records.Select(r=>ids.Contains(r.Id)?new Record { Id=r.Id,Name=r.Name,CollectionId=target.Id,ContentHash=r.ContentHash??r.Id }:r).ToList();
+        Write(updated); records.Clear(); records.AddRange(updated);
+        foreach(var entry in chosen) entry.Collection=target;
+        RefreshCollections();
+    }
+    internal int Delete(IEnumerable<MilkdropEntry> selected)
+    {
+        EnsureWritable(); var chosen=selected.Distinct().ToArray();
+        var known=entries.ToHashSet();
+        if(chosen.Any(entry=>entry.Bundled||!known.Contains(entry))) throw new ArgumentException("Only imported presets can be deleted.");
+        var ids=chosen.Select(entry=>entry.Id).ToHashSet();
+        var updated=records.Where(record=>!ids.Contains(record.Id)).ToList();
+        Write(updated); records.Clear(); records.AddRange(updated); entries.RemoveAll(entry=>ids.Contains(entry.Id));
+        int remainingFiles=0;
+        foreach(string id in ids)
+        {
+            if(!Hash(id)) throw new IOException("Invalid stored preset identifier.");
+            try { File.Delete(FilePath(id)); } catch(Exception error) when(error is IOException or UnauthorizedAccessException) { remainingFiles++; }
+        }
+        RefreshCollections(); return remainingFiles;
+    }
+    internal void ExpandAll()
+    {
+        EnsureWritable();
+        Write(records,collections.Select(c=>new MilkdropCollection { Id=c.Id,Name=c.Name,TextureRevision=c.TextureRevision,IsExpanded=true }));
+        foreach(var collection in collections) { collection.IsExpanded=true; collection.Refresh(); }
     }
     internal void SetExpanded(MilkdropCollection collection,bool expanded)
     {

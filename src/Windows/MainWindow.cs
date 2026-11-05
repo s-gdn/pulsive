@@ -83,7 +83,7 @@ public sealed partial class MainWindow : Window
         backdrops=new BackdropService(this);
         backdrops.ContrastBackground=surface=>prefs.BackgroundType==1&&Window.GetWindow(surface)==this?ParseColor(prefs.BackgroundColor,Color.FromRgb(16,23,37)):null;
         AddStyles();
-        visual = new Visualizer(audio) { Mode = Math.Max(0,prefs.Mode), UsePulsiveColorsForMilkdrop=prefs.UsePulsiveColorsForMilkdrop, Palette = Math.Clamp(prefs.Palette,0,4), Intensity = Math.Clamp(prefs.Intensity,.1,1),Zoom=Math.Clamp(prefs.Zoom,.25,4),CustomStart=ParseColor(prefs.CustomColorStart,Color.FromRgb(104,239,222)),CustomEnd=ParseColor(prefs.CustomColorEnd,Color.FromRgb(193,122,255)) };
+        visual = new Visualizer(audio) { Mode = Math.Max(0,prefs.Mode), UsePulsiveColorsForMilkdrop=prefs.UsePulsiveColorsForMilkdrop, ScaleMilkdropResolutionWithWindow=prefs.ScaleMilkdropResolutionWithWindow, Palette = Math.Clamp(prefs.Palette,0,4), Intensity = Math.Clamp(prefs.Intensity,.1,1),Zoom=Math.Clamp(prefs.Zoom,.25,4),CustomStart=ParseColor(prefs.CustomColorStart,Color.FromRgb(104,239,222)),CustomEnd=ParseColor(prefs.CustomColorEnd,Color.FromRgb(193,122,255)) };
         audio.Gain = (float)Math.Clamp(prefs.Gain,.25,5); audio.Demo = preview;
         visualBackdrop=new BackdropSurface { Adaptive=false,TintOpacity=.025,Outline=false,RequireFrame=true,CornerRadius=new CornerRadius(24),BlurRadius=Math.Clamp(prefs.BackgroundBlurAmount,0,48),IsHitTestVisible=false,Visibility=prefs.BackgroundBlur?Visibility.Visible:Visibility.Collapsed };
         solidBackdrop=new Border { CornerRadius=new CornerRadius(24),Background=new SolidColorBrush(ParseColor(prefs.BackgroundColor,Color.FromRgb(16,23,37))),IsHitTestVisible=false,Visibility=prefs.BackgroundType==1?Visibility.Visible:Visibility.Collapsed };
@@ -101,7 +101,7 @@ public sealed partial class MainWindow : Window
         var brand = new StackPanel { Orientation=Orientation.Horizontal, VerticalAlignment=VerticalAlignment.Center };
         var wordmark = new StackPanel { VerticalAlignment=VerticalAlignment.Center };
         wordmark.Children.Add(new TextBlock { Text="pulsive", FontSize=13, FontWeight=FontWeights.SemiBold,TextAlignment=TextAlignment.Center });
-        wordmark.Children.Add(new TextBlock { Text="v1.2.1", FontSize=8,TextAlignment=TextAlignment.Center });
+        wordmark.Children.Add(new TextBlock { Text="v1.2.2", FontSize=8,TextAlignment=TextAlignment.Center });
         brand.Children.Add(wordmark); bar.Children.Add(new BackdropSurface { Child=brand,Padding=new Thickness(12,2,12,2),Height=34,VerticalAlignment=VerticalAlignment.Center,Margin=new Thickness(0,0,8,0),CornerRadius=new CornerRadius(17) });
         brand.MouseLeftButtonDown += Drag;
         modeSelect = Select([], -1,118);
@@ -113,6 +113,7 @@ public sealed partial class MainWindow : Window
         modeSelect.SelectionChanged += (_,_) => { if(!syncingVisualModes) { ManualVisualChange(); ApplyVisualChoice(modeSelect.SelectedIndex); Save(); } };
         RebuildVisualiserChoices();
         Grid.SetColumn(modeSelect,1); bar.Children.Add(modeSelect);
+        InitializeStylePicker();
         var actions = new StackPanel { Orientation=Orientation.Horizontal, VerticalAlignment=VerticalAlignment.Center };
         Grid.SetColumn(actions,3); bar.Children.Add(actions);
         settingsButton=Button("⚙", "Settings · S", (_,_)=>ToggleSettings()); actions.Children.Add(settingsButton);

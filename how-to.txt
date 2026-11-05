@@ -1,4 +1,4 @@
-pulsive v1.2.1 - How to
+pulsive v1.2.2 - How to
 ======================
 
 RUNNING
@@ -23,6 +23,8 @@ WINDOW AND TOOLBAR
 Hover inside the overlay to reveal its toolbar. Drag the wordmark or empty
 space in the toolbar row to move the window. Double-click a draggable toolbar
 area to maximise or restore. Drag an edge or corner to resize.
+The style dropdown groups entries into collapsible collections; Pulsive and
+Bundled start expanded. Shuffle controls are on the Shuffle settings tab.
 The minimum overlay size is 340 x 180. At narrow widths, the preset picker
 moves to a second toolbar row and the wordmark hides to keep controls apart.
 
@@ -108,7 +110,14 @@ built-in styles, enabled MilkDrop entries, Default and saved user presets are
 included initially. Check individual entries or use Select all / Unselect all.
 MilkDrop entries disabled on the MilkDrop tab do not enter the shuffle list.
 New imports and saved presets are included automatically. Exclusions persist.
-Choosing a saved user preset applies all its appearance settings.
+Choose a collection in the left panel to show its entries on the right.
+Select all / Unselect all in Shuffle applies across all collections.
+Shuffle enablement,
+membership, timing mode, interval, beat count, fade and manual BPM are saved
+with each Pulsive user preset. Save changes or Save as new to keep a setup.
+Choosing a user preset manually restores its own shuffle configuration.
+When shuffle itself visits a saved appearance, the active playlist and timing
+stay in control so the cycle continues without changing playlist ownership.
 
 Time between transitions controls the wait after each completed transition,
 from 3 to 600 seconds. Transition duration controls the fade, from 0 to 8 seconds;
@@ -119,7 +128,7 @@ while the overlay is hidden or minimised, and while editing appearance settings
 or menus. It continues on the Shuffle page so you can monitor its timing live.
 Choosing a style manually restarts the wait. At least two entries are needed.
 
-Choose Beats (automatic BPM) under Transition timing to switch every 1-256
+Choose Beats (automatic BPM, beta) under Transition timing to switch every 1-256
 tracked beats instead of seconds. The default is 32 beats. A live approximate
 BPM and beat counter appear below the timing controls; fade duration stays in
 seconds. Counting starts after a fade finishes, with the same pause behaviour
@@ -140,6 +149,14 @@ not count the beats that occurred while it was hidden.
 RMS detects energy increases, so dense or heavily compressed music, weak
 transients and subdivisions can still produce missed or extra onsets and
 half/double-time estimates. Use Seconds for material without clear beats.
+
+Choose BPM (manual entry / tap) to enter a tempo from 20-400 BPM. Tap BPM on a
+phrase's first beat to restart the beat grid immediately at that point using
+the entered tempo. Continue tapping once per beat to measure/refine the tempo;
+recent consistent tap intervals are averaged. A fresh tap session after an idle
+gap starts a new grid. The first tap resets the transition beat count, while
+following taps refine tempo and phase without resetting that countdown.
+Manual tempo uses its own clock and continues during audio silence.
 
 OTHER SETTINGS
 
@@ -166,7 +183,12 @@ custom gradient. Sensitivity, brightness, zoom, feathering, backgrounds,
 and saved user presets work with these modes. Black areas become transparent;
 choose a dark solid background for a conventional MilkDrop appearance.
 
-Rendering is limited to 30 fps and a maximum 960 by 640 offscreen resolution.
+Rendering is limited to 30 fps and defaults to a maximum 960 by 640 resolution.
+Enable Scale resolution with window size on the MilkDrop tab for sharper output
+when enlarged or fullscreen. It includes Windows display scaling, with hardware
+limits and a roughly 16-megapixel allocation budget. This uses more GPU, CPU
+and memory. It cannot add detail to low-resolution textures in imported packs.
+This option is saved with each Pulsive user preset.
 The engine is released when you switch back to a non-projectM style or quit.
 The projectm folder includes the unmodified shared library, dependency notices,
 and buildable corresponding source. The shipped .milk presets are original
@@ -180,24 +202,37 @@ re-import is needed. Other unsupported presets can still fail to load.
 MILKDROP LIBRARY AND COLLECTIONS
 
 Open Settings > MilkDrop. New collection opens a glass-styled name prompt.
-Click a collection header or row to choose the import destination (its name
-appears beside the enabled count). Use Import .milk files to select presets,
-or drag .milk files onto a collection. Right-click an imported preset to move
-it to another collection. Existing imports stay in the Imported collection.
+Choose a collection in the left panel to show its presets and select the import
+destination. Use Import
+.milk files to import presets, or drag external files onto a collection.
+New ungrouped imports go into Imported.
 
-Drop a pack folder anywhere in the list to create a collection named after it.
+Drop a pack folder anywhere in either library panel to create a collection named after it.
 Pulsive finds .milk files recursively, including nested Presets folders, and
 imports images under directories named Texture or Textures (ignoring case).
 Cover images outside those directories are excluded. Dropping multiple folders
 creates one collection per folder; repeated names receive numbered suffixes.
 Drop a texture-only folder onto a Textures entry to update that collection.
 
-Click a collection header or its arrow to collapse or expand it. Space or Enter
-also toggles a selected header. Collapse state is remembered across launches;
-collapsing hides list rows without disabling presets or changing playback.
+Collections stay visible in their own scrollable panel while you select or drag
+presets on the right. Changing collection does not change the playing visual.
+The toolbar style selector still uses collapsible collection headers.
 
-Check presets to show them in the visualiser selector. Select all / Unselect
-all applies to every collection. Hiding the active preset switches to Aurora.
+Click the actual square checkbox to show/hide a preset in the style selector.
+Click its title/row to select it. Ctrl-click adds/removes individual selections;
+Shift-click selects a range. Select all / Unselect all changes row selection,
+within the current collection, without changing enabled state.
+Enable selected / Disable selected applies to the selected entries.
+Click the collection again (or clear row selection) to act on the whole
+collection: Enable collection / Disable collection affects every member;
+Delete presets confirms before removing its imported presets. The collection
+itself is kept, and bundled presets remain protected.
+Drag selected imported entries onto a custom collection to move them together;
+Bundled and Imported cannot be move destinations. A duplicate conflict rejects
+the whole move. Bundled presets stay protected in their original collection.
+Delete selected asks for confirmation, removes imported entries and their
+owned copies, and keeps original source files. Bundled entries cannot be deleted.
+Hiding or deleting the active preset switches to Aurora.
 Saved setups retain preset identity when entries move between collections.
 
 Texture requirements are detected automatically from active shader samplers,

@@ -9,3 +9,18 @@
 - [x] Adding many .milk files causes extreme lag constantly when pulsive is open. We need to find a way to stop that.
 - [x] Add a loading bar that displays the progress of an import, because adding many .milk files can take a long time.
 - [x] Dragging the program window looks like it is low fps. But when not being dragged it is fine. Attempt a fix.
+
+
+- [x] Listbox in shuffle sections needs to have entries listed under their collections like in milkdrop section.
+- [x] Add new option under transition timing. "BPM (manual entry / tap)". Shows an entry box where user can type in BPM. Also has a button next to it where user can tap to the song for bpm, like fl studio's tap bpm feature. Beat tracking should start from users first tap so they can sync it to major parts of the song.
+- [x] Change the visualiser style dropdown in toolbar so that user selects the collection, which when reveals the milk files in that collection. So user clicks dropdown, in the dropdown are then collapsable collections containing the milk files. bundled collection should be open by default.
+- [x] Add a toggle shuffle, next style and previous style button to toolbar next to style selector.
+- [x] In milkdrop listbox, only clicking in the actual checkbox should check and uncheck the entry, not just anywhere on the entry. Instead, clicking anywhere else on the entry selects that entry. Shift click and ctrl click for multiselect. User can then drag those selected milk files into another collection, as long as it isnt "Bunlded" or "Imported" default collections. Also add a delete button to remove selected files. Select and unselect all should now function as selecting the entries, then a new enable / disable button should enable / disable the selected entries.
+- [x] Change wording of automatic BPM in transition timing to note that it is in beta.
+- [x] Update watermark version number to 1.2.2
+- [x] Save shuffle options with each Pulsive user preset rather than globally.
+
+- [x] Changed my mind, remove the shuffle, fast forward and back buttons.
+- [x] enabling, disabling, and deleting should work when a collection is selected, affecting all entries in that collection.
+- [x] Milkdrop presets can look pixelated when maximising pulsive window / fullscreen. Is that something that we can actually fix or is it at maximum resolution? If so, add an option in milkdrop tab for "scale resolution with window size"
+- [x] The function we added where we can move presets to other collections is actually useless because user might not be able to see the other collections in the listbox with their wanted presets selected, so they can drag it to the new collection. For both milkdrop and shuffle listboxes, change it so the collections are in their own panel on the left of the listbox, and selecting one reveals their entries on the right.

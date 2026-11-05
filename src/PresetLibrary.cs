@@ -49,13 +49,20 @@ internal sealed class PresetLibrary
     }
     internal static void Copy(AppearanceSettings source,AppearanceSettings destination)
     {
-        foreach(var property in properties) property.SetValue(destination,property.GetValue(source));
+        foreach(var property in properties) property.SetValue(destination,Clone(property.GetValue(source)));
     }
+    static object? Clone(object? value)=>value is List<string> list?new List<string>(list):value;
+    internal static void CopyShuffle(ShuffleSettings source,ShuffleSettings destination)
+    {
+        foreach(var property in typeof(ShuffleSettings).GetProperties()) property.SetValue(destination,Clone(property.GetValue(source)));
+    }
+    internal static ShuffleSettings ShuffleSnapshot(ShuffleSettings source) { var copy=new ShuffleSettings(); CopyShuffle(source,copy); return copy; }
+    static bool Equal(object? a,object? b)=>a is IEnumerable<string> left&&b is IEnumerable<string> right?left.ToHashSet(StringComparer.Ordinal).SetEquals(right):Equals(a,b);
     static string? MilkdropId(AppearanceSettings settings)=>settings.Mode<11?null:settings.MilkdropPresetId??(settings.Mode<14?"bundled:"+ProjectMRenderer.Presets[settings.Mode-11]:null);
     internal static bool Matches(AppearanceSettings a,AppearanceSettings b)
     {
         bool sameMode=a.Mode>=11&&b.Mode>=11&&(MilkdropId(a)!=null||MilkdropId(b)!=null)?MilkdropId(a)==MilkdropId(b):a.Mode==b.Mode;
-        return sameMode&&properties.Where(p=>p.Name!=nameof(AppearanceSettings.Mode)&&p.Name!=nameof(AppearanceSettings.MilkdropPresetId)).All(p=>Equals(p.GetValue(a),p.GetValue(b)));
+        return sameMode&&properties.Where(p=>p.Name!=nameof(AppearanceSettings.Mode)&&p.Name!=nameof(AppearanceSettings.MilkdropPresetId)).All(p=>Equal(p.GetValue(a),p.GetValue(b)));
     }
     internal SavedPreset Add(string name,AppearanceSettings settings)
     {

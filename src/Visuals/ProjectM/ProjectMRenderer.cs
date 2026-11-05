@@ -27,6 +27,15 @@ internal sealed class ProjectMRenderer : IDisposable
     internal BitmapSource? Frame=>bitmap;
     internal bool CompatibilityRepairApplied { get; private set; }
     internal bool SkipPresetTransition { get; set; }
+    internal bool ScaleResolutionWithWindow { get; set; }
+    internal double DpiScaleX { get; set; }=1;
+    internal double DpiScaleY { get; set; }=1;
+    internal static (int Width,int Height) RenderSize(double width,double height,bool scale,double dpiX=1,double dpiY=1,int maximumDimension=8192)
+    {
+        width=Math.Max(1,width*(scale?dpiX:1)); height=Math.Max(1,height*(scale?dpiY:1));
+        double ratio=scale?Math.Min(1,Math.Min(maximumDimension/Math.Max(width,height),Math.Sqrt(16777216/(width*height)))):Math.Min(1,Math.Min(960/width,640/height));
+        return (Math.Max(64,(int)(width*ratio)),Math.Max(64,(int)(height*ratio)));
+    }
 
     internal ProjectMRenderer() => loadFailed=(_,message,_)=>Error="projectM preset: "+message;
 
@@ -39,11 +48,10 @@ internal sealed class ProjectMRenderer : IDisposable
         {
             try
             {
-                double ratio=Math.Min(1,Math.Min(960/width,640/height));
-                int w=Math.Max(64,(int)(width*ratio)),h=Math.Max(64,(int)(height*ratio));
+                var initial=RenderSize(width,height,false);
                 if(surface==null)
                 {
-                    surface=new OpenGlSurface(w,h);
+                    surface=new OpenGlSurface(initial.Width,initial.Height);
                     ProjectMNative.InitialiseOpenGl();
                     instance=ProjectMNative.projectm_create();
                     if(instance==IntPtr.Zero) throw new InvalidOperationException("The projectM engine could not start on this graphics driver.");
@@ -55,6 +63,7 @@ internal sealed class ProjectMRenderer : IDisposable
                     pcm=new float[Math.Min(2048,(int)ProjectMNative.projectm_pcm_get_max_samples())];
                 }
                 surface.MakeCurrent();
+                var (w,h)=RenderSize(width,height,ScaleResolutionWithWindow,DpiScaleX,DpiScaleY,surface.MaximumDimension);
                 bool resized=bitmap==null||bitmap.PixelWidth!=w||bitmap.PixelHeight!=h;
                 if(resized)
                 {
@@ -104,19 +113,23 @@ internal sealed class ProjectMRenderer : IDisposable
                     surface.ReadPixels(nativePixels);
                     // MilkDrop renders against black. Use max-channel alpha to
                     // preserve its light while letting the desktop show through.
-                    for(int y=0;y<h;y++)
-                    for(int x=0;x<w;x++)
+                    void ConvertRow(int y)
                     {
-                        int src=((h-1-y)*w+x)*4,dst=(y*w+x)*4;
-                        byte b=nativePixels[src],g=nativePixels[src+1],r=nativePixels[src+2];
-                        byte alpha=Math.Max(r,Math.Max(g,b));
-                        if(palette>=0)
+                        for(int x=0;x<w;x++)
                         {
-                            var colour=gradient[(r*54+g*183+b*19)>>8];
-                            r=(byte)(colour.R*alpha/255); g=(byte)(colour.G*alpha/255); b=(byte)(colour.B*alpha/255);
+                            int src=((h-1-y)*w+x)*4,dst=(y*w+x)*4;
+                            byte b=nativePixels[src],g=nativePixels[src+1],r=nativePixels[src+2];
+                            byte alpha=Math.Max(r,Math.Max(g,b));
+                            if(palette>=0)
+                            {
+                                var colour=gradient[(r*54+g*183+b*19)>>8];
+                                r=(byte)(colour.R*alpha/255); g=(byte)(colour.G*alpha/255); b=(byte)(colour.B*alpha/255);
+                            }
+                            pixels[dst]=b; pixels[dst+1]=g; pixels[dst+2]=r; pixels[dst+3]=alpha;
                         }
-                        pixels[dst]=b; pixels[dst+1]=g; pixels[dst+2]=r; pixels[dst+3]=alpha;
                     }
+                    if(w*h>=1048576) Parallel.For(0,h,ConvertRow);
+                    else for(int y=0;y<h;y++) ConvertRow(y);
                     bitmap!.WritePixels(new Int32Rect(0,0,w,h),pixels,w*4,0);
                     lastFrame=time;
                     colours=nextColours;
