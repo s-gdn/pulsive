@@ -19,3 +19,5 @@ projectM styles require an OpenGL 3.3 graphics driver and the Visual C++ x64 run
 See [how-to.txt](how-to.txt) for running, building, controls, settings, and troubleshooting. Building from source requires the .NET 8 SDK on Windows.
 
 Audio is processed locally in memory; it is not saved or transmitted. Built with WPF, Windows Composition, NAudio, Win2D, SkiaSharp, and [projectM](https://github.com/projectM-visualizer/projectm). Portable builds include dependency licence notices and projectM source.
+
+**Please note: Older Windows Defender versions have been known to randomly flag the compressed zip releases as a virus and block the download. This is an error with windows defender's machine learning and is fixed by updating to the newest version of Windows Defender. And of course you can always inspect the source code and build the program yourself if this worries you.**
